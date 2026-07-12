@@ -1,0 +1,1 @@
+"""MindCare AI — Routes package."""

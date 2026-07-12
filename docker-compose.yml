@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mindcare_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./mindcare.db
+      - SECRET_KEY=your-gemini-capstone-development-secret-key-replace-this
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DEBUG=True
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/logs
+    restart: always
+
+volumes:
+  backend_logs:
