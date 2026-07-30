@@ -1,0 +1,44 @@
+{
+  "go_emotions": {
+    "train": 43410,
+    "dev": 5426,
+    "test": 5427,
+    "labels": [
+      "admiration",
+      "amusement",
+      "anger",
+      "annoyance",
+      "approval",
+      "caring",
+      "confusion",
+      "curiosity",
+      "desire",
+      "disappointment",
+      "disapproval",
+      "disgust",
+      "embarrassment",
+      "excitement",
+      "fear",
+      "gratitude",
+      "grief",
+      "joy",
+      "love",
+      "nervousness",
+      "optimism",
+      "pride",
+      "realization",
+      "relief",
+      "remorse",
+      "sadness",
+      "surprise",
+      "neutral"
+    ]
+  },
+  "empathetic_dialogues": {
+    "train": 76668,
+    "valid": 6318,
+    "test": 5701
+  },
+  "dair_emotion": {},
+  "mental_health_qa": {}
+}

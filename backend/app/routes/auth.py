@@ -1,82 +1,215 @@
 """
-MindCare AI — Auth Routes
-Handles /auth/* endpoints: signup, login, profile management.
+MindCare AI — Authentication Routes
+
+Handles:
+- User Registration
+- User Login
+- Current User Profile
+- Profile Update
+- Logout
+- Account Deletion
 """
+
 from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import Token, UserCreate, UserLogin, UserResponse, UserUpdate
+from app.schemas.auth import (
+    Token,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    UserUpdate,
+)
 from app.services.auth_service import auth_service
-from app.utils.security import create_access_token, get_current_active_user
-from app.config import settings
+from app.utils.security import (
+    create_access_token,
+    get_current_active_user,
+)
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"],
+)
 
-# Convenience type aliases
-DBDep = Annotated[Session, Depends(get_db)]
+# ---------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------
+
+DBSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 
 
-@router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
-def signup(data: UserCreate, db: DBDep):
-    """Register a new user and return a JWT token."""
-    user = auth_service.create_user(db, data)
-    token = create_access_token(
+# ---------------------------------------------------------------------
+# Register
+# ---------------------------------------------------------------------
+@router.post(
+    "/signup",
+    response_model=Token,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new user",
+)
+def signup(user_data: UserCreate, db: DBSession) -> Token:
+    """
+    Register a new user and return an access token.
+    """
+
+    user = auth_service.create_user(db, user_data)
+
+    access_token = create_access_token(
         data={"sub": user.email},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
     )
-    return Token(access_token=token, token_type="bearer", user=UserResponse.model_validate(user))
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse.model_validate(user),
+    )
 
 
-@router.post("/login", response_model=Token)
-def login(data: UserLogin, db: DBDep):
-    """Authenticate and return a JWT token."""
-    user = auth_service.authenticate_user(db, data.email, data.password)
-    if not user:
+# ---------------------------------------------------------------------
+# Login
+# ---------------------------------------------------------------------
+@router.post(
+    "/login",
+    response_model=Token,
+    summary="User Login",
+)
+def login(credentials: UserLogin, db: DBSession) -> Token:
+    """
+    Authenticate user using email and password.
+    """
+
+    user = auth_service.authenticate_user(
+        db,
+        credentials.email,
+        credentials.password,
+    )
+
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Invalid email or password.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Account is deactivated")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account has been deactivated.",
+        )
 
-    token = create_access_token(
+    access_token = create_access_token(
         data={"sub": user.email},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
     )
-    return Token(access_token=token, token_type="bearer", user=UserResponse.model_validate(user))
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse.model_validate(user),
+    )
 
 
-@router.get("/me", response_model=UserResponse)
-def get_me(current_user: CurrentUser):
-    """Return the authenticated user's profile."""
+# ---------------------------------------------------------------------
+# Current User
+# ---------------------------------------------------------------------
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Get Current User",
+)
+def read_current_user(current_user: CurrentUser) -> UserResponse:
+    """
+    Return the authenticated user's profile.
+    """
+
     return UserResponse.model_validate(current_user)
 
 
-@router.put("/me", response_model=UserResponse)
-def update_me(data: UserUpdate, current_user: CurrentUser, db: DBDep):
-    """Update the authenticated user's profile."""
-    updated = auth_service.update_user(db, current_user.id, data)
-    return UserResponse.model_validate(updated)
-
-
-@router.post("/logout")
-def logout():
+# ---------------------------------------------------------------------
+# Update Profile
+# ---------------------------------------------------------------------
+@router.put(
+    "/me",
+    response_model=UserResponse,
+    summary="Update Current User",
+)
+def update_current_user(
+    user_data: UserUpdate,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> UserResponse:
     """
-    JWT is stateless — logout is handled client-side by discarding the token.
-    This endpoint exists for API consistency and future token blacklist support.
+    Update the authenticated user's profile.
     """
-    return {"message": "Successfully logged out. Please clear your token on the client."}
+
+    updated_user = auth_service.update_user(
+        db=db,
+        user_id=current_user.id,
+        user_data=user_data,
+    )
+
+    return UserResponse.model_validate(updated_user)
 
 
-@router.delete("/me", status_code=status.HTTP_200_OK)
-def delete_account(current_user: CurrentUser, db: DBDep):
-    """Deactivate and soft-delete the user account and all related data."""
-    auth_service.delete_user(db, current_user.id)
-    return {"message": "Account successfully deactivated. Your data will be deleted within 30 days."}
+# ---------------------------------------------------------------------
+# Logout
+# ---------------------------------------------------------------------
+@router.post(
+    "/logout",
+    summary="Logout",
+)
+def logout(current_user: CurrentUser):
+    """
+    JWT authentication is stateless.
+
+    Logout simply instructs the client to remove the stored token.
+    This endpoint exists for future refresh-token revocation or
+    token blacklisting support.
+    """
+
+    return {
+        "success": True,
+        "message": "Logged out successfully.",
+    }
+
+
+# ---------------------------------------------------------------------
+# Delete Account
+# ---------------------------------------------------------------------
+@router.delete(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    summary="Delete Account",
+)
+def delete_account(
+    current_user: CurrentUser,
+    db: DBSession,
+):
+    """
+    Soft delete the authenticated user's account.
+    """
+
+    auth_service.delete_user(
+        db=db,
+        user_id=current_user.id,
+    )
+
+    return {
+        "success": True,
+        "message": (
+            "Your account has been deactivated and scheduled "
+            "for permanent deletion within 30 days."
+        ),
+    }

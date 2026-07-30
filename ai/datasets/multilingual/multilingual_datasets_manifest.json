@@ -1,0 +1,8 @@
+{
+  "total_languages_supported": 82,
+  "languages_catalog": "D:\\Projects\\EAI\\ai\\datasets\\multilingual\\languages_iso639_manifest.json",
+  "benchmark_dataset_stats": {},
+  "transliterated_lexicon_stats": {
+    "total_transliterated_entries": 13
+  }
+}

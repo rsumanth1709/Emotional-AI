@@ -41,10 +41,32 @@ class DashboardResponse(BaseModel):
     recent_chats: List[ChatHistoryItem]
 
 
+class HourlyMood(BaseModel):
+    hour: str                      # e.g. "08:00" or "8 AM"
+    mood_score: float
+    dominant_emotion: str
+
+
+class HeatmapDay(BaseModel):
+    date: str                      # ISO date string (YYYY-MM-DD)
+    mood_score: float
+    count: int
+
+
+class StreakStats(BaseModel):
+    current_streak: int
+    longest_streak: int
+
+
 class AnalyticsResponse(BaseModel):
     emotion_distribution: List[EmotionDistribution]
     weekly_mood: List[WeeklyMood]
     monthly_trend: List[MonthlyTrend]
+    hourly_mood: List[HourlyMood]
+    calendar_heatmap: List[HeatmapDay]
+    streak_stats: StreakStats
+    improvement_score: float
+    volatility_score: float
     total_sessions: int
     avg_stress: float
     avg_mood: float

@@ -41,6 +41,8 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     is_active: bool
     is_admin: bool
+    xp: int = 0
+    level: int = 1
     created_at: datetime
 
     model_config = {"from_attributes": True}

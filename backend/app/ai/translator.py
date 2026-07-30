@@ -89,3 +89,37 @@ def detect_and_translate(text: str) -> Tuple[str, str]:
     except Exception as e:
         logger.warning(f"Translation/Language detection failed: {e}. Falling back to original text.")
         return text, manual_lang or "en"
+
+
+def translate_to_language(text: str, target_lang: str) -> str:
+    """
+    Translates English text into target_lang (e.g. 'es', 'hi', 'fr', 'de', 'zh', 'ar', 'ta', 'te', 'ja')
+    to ensure responses are strictly delivered in the user's spoken/requested language.
+    """
+    if not text or not target_lang or target_lang in ("en", "en-US", "auto", "transliterated"):
+        return text
+
+    # Extract short 2-letter language code (e.g. 'es-ES' -> 'es', 'hi-IN' -> 'hi')
+    lang_code = target_lang.split("-")[0].lower()
+    if lang_code == "en":
+        return text
+
+    try:
+        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl={lang_code}&dt=t&q=" + urllib.parse.quote(text)
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            translated_chunks = []
+            if data and isinstance(data, list) and data[0]:
+                for chunk in data[0]:
+                    if chunk and isinstance(chunk, list) and chunk[0]:
+                        translated_chunks.append(chunk[0])
+            translated_text = "".join(translated_chunks).strip()
+            logger.info(f"Response translated to '{lang_code}': '{translated_text[:60]}...'")
+            return translated_text or text
+    except Exception as e:
+        logger.warning(f"Translation to {target_lang} failed: {e}")
+        return text

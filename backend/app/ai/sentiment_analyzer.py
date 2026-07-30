@@ -5,17 +5,24 @@ a rule-based model optimised for short social/chat text.
 """
 from typing import Dict
 
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
 from app.utils.logger import logger
+
+try:
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+except ImportError:  # pragma: no cover - optional dependency
+    SentimentIntensityAnalyzer = None
+    logger.warning("vaderSentiment is not installed; using neutral fallback sentiment analysis")
 
 
 class SentimentAnalyzer:
     """Lightweight rule-based sentiment analysis using VADER."""
 
     def __init__(self):
-        self._analyzer = SentimentIntensityAnalyzer()
-        logger.info("VADER SentimentAnalyzer loaded.")
+        self._analyzer = SentimentIntensityAnalyzer() if SentimentIntensityAnalyzer else None
+        if self._analyzer:
+            logger.info("VADER SentimentAnalyzer loaded.")
+        else:
+            logger.info("VADER unavailable; using neutral fallback sentiment analysis.")
 
     def analyze(self, text: str) -> Dict:
         """
@@ -32,6 +39,9 @@ class SentimentAnalyzer:
             }
         """
         if not text or not text.strip():
+            return self._neutral_result()
+
+        if self._analyzer is None:
             return self._neutral_result()
 
         scores = self._analyzer.polarity_scores(text)

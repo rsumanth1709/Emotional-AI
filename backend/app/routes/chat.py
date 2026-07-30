@@ -5,7 +5,7 @@ POST /chat, GET /chat/sessions, GET /chat/sessions/{session_id}, DELETE /chat/se
 import uuid
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Form, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -34,7 +34,15 @@ def send_message(request: ChatRequest, current_user: CurrentUser, db: DBDep):
         user_id=current_user.id,
         message=request.message,
         session_id=request.session_id,
+        persona=request.persona,
     )
+
+
+@router.get("/personas")
+def get_therapist_personas(current_user: CurrentUser):
+    """Retrieve all available AI therapist support personas."""
+    from app.ai.personas import PERSONAS
+    return PERSONAS
 
 
 @router.get("/sessions", response_model=List[SessionSummary])
@@ -57,3 +65,51 @@ def delete_session(session_id: str, current_user: CurrentUser, db: DBDep):
     if not deleted:
         return {"message": "Session not found or already deleted."}
     return {"message": "Session deleted successfully."}
+
+
+@router.post("/multimodal", response_model=ChatResponse)
+def send_multimodal_message(
+    db: DBDep,
+    current_user: CurrentUser,
+    message: Optional[str] = Form(None),
+    session_id: Optional[str] = Form(None),
+    audio: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None),
+):
+    """
+    Multimodal chat endpoint. Accepts optional message text, voice recording, 
+    and webcam snapshot, performing emotion analysis on all inputs before 
+    generating the assistant response.
+    """
+    import tempfile
+    import shutil
+    import os
+
+    audio_path = None
+    if audio:
+        suffix = "." + audio.filename.split(".")[-1] if audio.filename and "." in audio.filename else ".wav"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(audio.file, tmp)
+            audio_path = tmp.name
+
+    image_path = None
+    if image:
+        suffix = "." + image.filename.split(".")[-1] if image.filename and "." in image.filename else ".jpg"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(image.file, tmp)
+            image_path = tmp.name
+
+    try:
+        return chat_service.process_multimodal_message(
+            db=db,
+            user_id=current_user.id,
+            message=message,
+            session_id=session_id,
+            audio_path=audio_path,
+            image_path=image_path,
+        )
+    finally:
+        if audio_path and os.path.exists(audio_path):
+            os.unlink(audio_path)
+        if image_path and os.path.exists(image_path):
+            os.unlink(image_path)

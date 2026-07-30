@@ -523,21 +523,14 @@ class ResponseGenerator:
         sentiment: str,
         stress_score: float,
         conversation_history: Optional[List[Dict]] = None,
+        past_memories: Optional[List[Dict]] = None,
         target_lang: str = "en",
+        persona: Optional[str] = "friendly",
+        clinical_rag_context: Optional[str] = None,
     ) -> str:
         """
-        Generate an empathetic response.
-
-        Args:
-            text:                  The user's current message.
-            emotion:               Detected therapeutic emotion category.
-            sentiment:             "positive" | "negative" | "neutral"
-            stress_score:          0.0 – 10.0
-            conversation_history:  List of {"role": "user"|"assistant", "content": str}
-            target_lang:           The language code to reply in.
-
-        Returns:
-            str: The assistant's response text.
+        Generate an empathetic response under the active therapist persona rules,
+        injecting grounded clinical RAG guidelines and long-term vector memory context.
         """
         self._init_gemini()
 
@@ -573,6 +566,47 @@ class ResponseGenerator:
                 f"[Guidance] {emotion_ctx}",
                 "",
             ]
+
+            # Retrieve adaptive communication style instruction from user's personalized emotion profile & RLHF feedback
+            try:
+                from app.ai.profile_engine import profile_engine
+                from app.services.feedback_service import feedback_service
+                from app.database import SessionLocal
+                with SessionLocal() as db_session:
+                    user_id_val = conversation_history[0].get("user_id", "") if conversation_history else None
+                    if user_id_val:
+                        prof = profile_engine.get_user_profile(db_session, user_id=user_id_val)
+                        if prof and prof.get("communication_style"):
+                            style_inst = prof["communication_style"].get("instruction")
+                            if style_inst:
+                                prompt_parts.append(f"[Adaptive Communication Style] {style_inst}")
+                        
+                        # RLHF Fine-Tuned Preferences
+                        pref = feedback_service.get_user_preferences(db_session, user_id=user_id_val)
+                        if pref and pref.get("total_feedback_count", 0) > 0:
+                            positive_rate = pref.get("positive_rate_pct", 100)
+                            preferred = ", ".join(pref.get("preferred_categories", []))
+                            prompt_parts.append(
+                                f"[RLHF Preference Tuning] User historical satisfaction rate: {positive_rate}%. "
+                                f"Preferred interaction topics/styles: {preferred or 'Empathetic listening'}. "
+                                f"Adapt tone to match user thumbs-up feedback history."
+                            )
+            except Exception:
+                pass
+
+            if past_memories:
+                prompt_parts.append("[Long-Term Vector Memory (User History & Context)]")
+                for mem in past_memories:
+                    role_label = "User" if mem.get("role") == "user" else "MindCare AI"
+                    prompt_parts.append(f"• [{role_label}]: {mem.get('content', '')}")
+                prompt_parts.append("Use these past long-term memories to show continuity, remember user details, and provide personalized context.")
+                prompt_parts.append("")
+
+            if clinical_rag_context:
+                prompt_parts.append("[Grounded Clinical Counseling Guidelines (Emotion-Aware RAG)]")
+                prompt_parts.append(clinical_rag_context)
+                prompt_parts.append("Use the clinical guidelines above to ground your empathetic response.")
+                prompt_parts.append("")
 
             if conversation_history:
                 prompt_parts.append("[Recent conversation]")

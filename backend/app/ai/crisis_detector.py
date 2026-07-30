@@ -1,168 +1,234 @@
 """
-MindCare AI — Crisis Detector (Safety Interceptor)
-Detects potentially self-harm or crisis-level messages using
-regex patterns and keyword matching.
-
-⚠️  CRITICAL SAFETY COMPONENT — Do not modify without clinical review.
+MindCare AI — Advanced Crisis Detector (Safety Interceptor)
+Detects suicide, self-harm, depression, and panic attack triggers with multi-level severity scoring (Low, Medium, High, Critical)
+and selects tailored resource suggestions.
 """
 import re
 from typing import Dict, List
 
 from app.utils.logger import logger
 
+# ── Specialized Crisis Resources ──────────────────────────────────────────
 
-# ── Crisis hotline resources ───────────────────────────────────────────────
-CRISIS_RESOURCES = [
+SUICIDE_RESOURCES = [
     {
-        "name": "988 Suicide & Crisis Lifeline",
-        "number": "988",
-        "description": "Call or text 988 — Available 24/7 in the US",
+        "name": "Tele-MANAS (India Government Helpline)",
+        "number": "14416 or 1800-891-4416",
+        "description": "Free, 24/7 mental health counseling service by the Govt of India.",
     },
     {
-        "name": "Crisis Text Line",
-        "number": "Text HOME to 741741",
-        "description": "Free, 24/7 text-based crisis counseling",
+        "name": "AASRA (India Suicide Prevention)",
+        "number": "91-9820466726",
+        "description": "24/7, free, confidential suicide prevention helpline in India.",
     },
     {
-        "name": "International Association for Suicide Prevention",
-        "number": "https://www.iasp.info/resources/Crisis_Centres/",
-        "description": "Global crisis center directory",
+        "name": "988 Suicide & Crisis Lifeline (US & Canada)",
+        "number": "988 (Call or Text)",
+        "description": "Free, confidential, 24/7 support in North America.",
+    }
+]
+
+SELF_HARM_RESOURCES = [
+    {
+        "name": "AASRA Helpline (India)",
+        "number": "91-9820466726",
+        "description": "Confidential support for self-injury and severe distress.",
     },
+    {
+        "name": "S.A.F.E. Alternatives (US)",
+        "number": "1-800-DONT-CUT (366-8288)",
+        "description": "Referrals and resources for overcoming self-harm.",
+    }
+]
+
+DEPRESSION_RESOURCES = [
+    {
+        "name": "Kiran Mental Health Helpline (Govt of India)",
+        "number": "1800-599-0019",
+        "description": "24/7, free rehabilitation and mental health referral helpline.",
+    },
+    {
+        "name": "Vandrevala Foundation (India)",
+        "number": "91-9999666555",
+        "description": "24/7 free mental health counseling helpline.",
+    },
+    {
+        "name": "NAMI HelpLine (US)",
+        "number": "1-800-950-NAMI (6264)",
+        "description": "Information and support referral (M-F 10am-10pm ET).",
+    }
+]
+
+PANIC_RESOURCES = [
+    {
+        "name": "MindCare Calming Guide",
+        "number": "Navigate to Support Tools -> Breathing",
+        "description": "Access box breathing tools designed to calm immediate panic symptoms.",
+    },
+    {
+        "name": "Vandrevala Foundation (India)",
+        "number": "91-9999666555",
+        "description": "24/7 supportive counseling for immediate panic attacks.",
+    }
+]
+
+EMERGENCY_RESOURCES = [
     {
         "name": "Emergency Services",
-        "number": "911 (US) / 999 (UK) / 112 (EU)",
-        "description": "For immediate life-threatening emergencies",
+        "number": "112 (India & Europe) / 911 (US) / 999 (UK)",
+        "description": "For immediate, life-threatening emergencies.",
+    }
+]
+
+# ── Pattern Specifications ──
+
+PATTERNS = {
+    "suicide": {
+        "critical": [
+            r"\bsuicide\b", r"\bsuicidal\b", r"kill\s+myself", r"end\s+my\s+life",
+            r"take\s+my\s+life", r"want\s+to\s+die", r"overdose\s+on", r"ending\s+everything"
+        ],
+        "high": [
+            r"better\s+off\s+dead", r"don'?t\s+want\s+to\s+live", r"no\s+reason\s+to\s+live", r"wishing\s+i\s+was\s+dead"
+        ]
     },
-]
+    "self_harm": {
+        "high": [
+            r"\bself.?harm\b", r"hurting?\s+myself", r"cutting?\s+myself", r"burning?\s+myself", r"harming?\s+myself"
+        ],
+        "medium": [
+            r"want\s+to\s+cut", r"feel\s+like\s+cutting", r"injure\s+myself"
+        ]
+    },
+    "depression": {
+        "high": [
+            r"no\s+point\s+in\s+living", r"can'?t\s+go\s+on\s+anymore", r"completely\s+empty\s+inside", r"severe\s+depression"
+        ],
+        "medium": [
+            r"so\s+depressed", r"feel\s+hopeless", r"nothing\s+matters", r"want\s+to\s+give\s+up", r"clinical\s+depression"
+        ],
+        "low": [
+            r"feel\s+alone", r"so\s+lonely", r"nobody\s+cares", r"feel\s+sad", r"feeling\s+empty"
+        ]
+    },
+    "panic_attack": {
+        "high": [
+            r"severe\s+panic\s+attack", r"having\s+a\s+panic\s+attack", r"can'?t\s+breathe\s+panic", r"panic\s+attack\s+now"
+        ],
+        "medium": [
+            r"panic\s+attack", r"hyperventilating", r"chest\s+tightness\s+panic", r"heart\s+racing\s+panic"
+        ],
+        "low": [
+            r"feeling\s+panicky", r"extreme\s+anxiety", r"so\s+scared", r"fear\s+of\s+dying"
+        ]
+    }
+}
 
-# ── Keyword and regex patterns ─────────────────────────────────────────────
-# CRITICAL patterns — a single match triggers "critical" severity
-_CRITICAL_PATTERNS = [
-    r"\bsuicide\b",
-    r"\bsuicidal\b",
-    r"kill\s+myself",
-    r"end\s+my\s+life",
-    r"take\s+my\s+life",
-    r"want\s+to\s+die",
-    r"no\s+reason\s+to\s+live",
-    r"better\s+off\s+dead",
-    r"don'?t\s+want\s+to\s+live",
-    r"ending\s+everything",
-    r"overdose\s+on",
-]
-
-# HIGH patterns — two or more matches trigger "high" severity
-_HIGH_PATTERNS = [
-    r"\bself.?harm\b",
-    r"hurt\s+myself",
-    r"cut\s+myself",
-    r"hate\s+my\s+life",
-    r"can'?t\s+go\s+on",
-    r"no\s+point\s+(in\s+)?living",
-    r"nobody\s+cares\s+(if\s+i|about\s+me)",
-    r"everyone\s+would\s+be\s+better\s+without\s+me",
-]
-
-# LOW patterns — softer distress signals that warrant attention
-_LOW_PATTERNS = [
-    r"feel\s+(so\s+)?alone",
-    r"(feel|feeling)\s+hopeless",
-    r"nothing\s+matters",
-    r"give\s+up",
-    r"can'?t\s+take\s+it\s+anymore",
-    r"i\s+give\s+up",
-]
-
-
-def _compile_patterns(patterns: List[str]) -> List[re.Pattern]:
-    return [re.compile(p, re.IGNORECASE) for p in patterns]
-
-
-_COMPILED_CRITICAL = _compile_patterns(_CRITICAL_PATTERNS)
-_COMPILED_HIGH = _compile_patterns(_HIGH_PATTERNS)
-_COMPILED_LOW = _compile_patterns(_LOW_PATTERNS)
+# Compile patterns
+COMPILED_PATTERNS = {}
+for category, levels in PATTERNS.items():
+    COMPILED_PATTERNS[category] = {}
+    for level, regex_list in levels.items():
+        COMPILED_PATTERNS[category][level] = [re.compile(r, re.IGNORECASE) for r in regex_list]
 
 
 class CrisisDetector:
-    """
-    Scans user text for crisis signals and returns severity + resources.
-    Always errs on the side of caution.
-    """
+    """Scans text for mental health risks and categorizes severity and risk types."""
 
     def detect(self, text: str) -> Dict:
         """
-        Analyze text for crisis indicators.
-
+        Analyze text for suicide, self-harm, depression, and panic attack triggers.
         Returns:
             {
-                "is_crisis":        bool,
-                "severity":         "none" | "low" | "high" | "critical",
+                "is_crisis": bool,
+                "severity": "none" | "low" | "medium" | "high" | "critical",
+                "risk_type": str (primary matched category or None),
                 "matched_keywords": List[str],
-                "crisis_resources": List[dict],  # populated when is_crisis=True
+                "crisis_resources": List[dict]
             }
         """
         if not text or not text.strip():
             return self._safe_result()
 
-        matched: List[str] = []
+        matched_details = [] # list of (category, level, keyword)
+        
+        for category, levels in COMPILED_PATTERNS.items():
+            for level, regexes in levels.items():
+                for regex in regexes:
+                    match = regex.search(text)
+                    if match:
+                        matched_details.append((category, level, match.group(0)))
 
-        # Check critical patterns first
-        for pattern in _COMPILED_CRITICAL:
-            match = pattern.search(text)
-            if match:
-                matched.append(match.group(0))
+        if not matched_details:
+            return self._safe_result()
 
-        if matched:
-            logger.warning(f"CRISIS DETECTED [critical]: matched={matched}")
-            return {
-                "is_crisis": True,
-                "severity": "critical",
-                "matched_keywords": matched,
-                "crisis_resources": CRISIS_RESOURCES,
-            }
+        # Classify overall risk level based on hierarchy of matched levels
+        # Order: critical > high > medium > low
+        has_critical = any(d[1] == "critical" for d in matched_details)
+        has_high = any(d[1] == "high" for d in matched_details)
+        has_medium = any(d[1] == "medium" for d in matched_details)
+        
+        if has_critical:
+            severity = "critical"
+        elif has_high:
+            severity = "high"
+        elif has_medium:
+            severity = "medium"
+        else:
+            severity = "low"
 
-        # Check high patterns
-        high_matches = []
-        for pattern in _COMPILED_HIGH:
-            match = pattern.search(text)
-            if match:
-                high_matches.append(match.group(0))
+        # Determine primary risk type (category matching the highest severity)
+        matched_categories = [d[0] for d in matched_details]
+        # Prefer category of the highest severity match
+        highest_level = "critical" if has_critical else ("high" if has_high else ("medium" if has_medium else "low"))
+        primary_category = next((d[0] for d in matched_details if d[1] == highest_level), matched_categories[0])
 
-        if high_matches:
-            logger.warning(f"CRISIS DETECTED [high]: matched={high_matches}")
-            return {
-                "is_crisis": True,
-                "severity": "high",
-                "matched_keywords": high_matches,
-                "crisis_resources": CRISIS_RESOURCES,
-            }
+        keywords = list(set(d[2] for d in matched_details))
+        
+        # Build tailored resources list
+        resources = []
+        unique_resource_names = set()
 
-        # Check low patterns
-        low_matches = []
-        for pattern in _COMPILED_LOW:
-            match = pattern.search(text)
-            if match:
-                low_matches.append(match.group(0))
+        def add_resources(res_list):
+            for res in res_list:
+                if res["name"] not in unique_resource_names:
+                    resources.append(res)
+                    unique_resource_names.add(res["name"])
 
-        if low_matches:
-            logger.info(f"Distress signal detected [low]: matched={low_matches}")
-            return {
-                "is_crisis": True,
-                "severity": "low",
-                "matched_keywords": low_matches,
-                "crisis_resources": CRISIS_RESOURCES,
-            }
+        # Map categories to resource catalogs
+        for cat in set(matched_categories):
+            if cat == "suicide":
+                add_resources(SUICIDE_RESOURCES)
+            elif cat == "self_harm":
+                add_resources(SELF_HARM_RESOURCES)
+            elif cat == "depression":
+                add_resources(DEPRESSION_RESOURCES)
+            elif cat == "panic_attack":
+                add_resources(PANIC_RESOURCES)
 
-        return self._safe_result()
+        # Always append general emergency contact card for High or Critical situations
+        if severity in ("critical", "high"):
+            add_resources(EMERGENCY_RESOURCES)
+
+        logger.warning(
+            f"CRISIS DETECTED: severity={severity} type={primary_category} matched={keywords}"
+        )
+
+        return {
+            "is_crisis": True,
+            "severity": severity,
+            "risk_type": primary_category,
+            "matched_keywords": keywords,
+            "crisis_resources": resources
+        }
 
     def _safe_result(self) -> Dict:
         return {
             "is_crisis": False,
             "severity": "none",
+            "risk_type": None,
             "matched_keywords": [],
-            "crisis_resources": [],
+            "crisis_resources": []
         }
 
-
-# Module-level singleton
 crisis_detector = CrisisDetector()

@@ -1,0 +1,21 @@
+{
+  "categories": [
+    "Angry",
+    "Anxiety",
+    "Excited",
+    "Fear",
+    "Happy",
+    "Hopeful",
+    "Lonely",
+    "Neutral",
+    "Sad",
+    "Stress"
+  ],
+  "num_classes": 10,
+  "test_accuracy": 0.669,
+  "test_macro_f1": 0.6268,
+  "test_weighted_f1": 0.6608,
+  "num_train_samples": 66836,
+  "num_test_samples": 7427,
+  "vocab_size": 35000
+}

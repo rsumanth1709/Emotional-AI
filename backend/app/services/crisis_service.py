@@ -33,14 +33,25 @@ class CrisisService:
                 trigger_message=text[:1000],  # Truncate to DB limit
                 flagged_keywords=", ".join(result["matched_keywords"]),
                 severity=result["severity"],
+                risk_type=result.get("risk_type"),
             )
             db.add(alert)
             db.commit()
 
             logger.warning(
                 f"Crisis alert saved | user={user_id} severity={result['severity']} "
-                f"session={session_id} keywords={result['matched_keywords']}"
+                f"session={session_id} keywords={result['matched_keywords']} risk_type={result.get('risk_type')}"
             )
+
+            # Trigger emergency protocols if High or Critical risk is matched
+            if result["severity"] in ("critical", "high"):
+                logger.warning(
+                    f"\n=======================================================\n"
+                    f"[EMERGENCY PROTOCOL TRIGGERED] \n"
+                    f"Simulated notification dispatched to emergency contacts for user {user_id}.\n"
+                    f"Reason: {result['severity'].upper()} severity {result.get('risk_type', '').upper()} risk detected.\n"
+                    f"=======================================================\n"
+                )
 
         return result
 

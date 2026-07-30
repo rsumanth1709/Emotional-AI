@@ -1,0 +1,658 @@
+[
+  {
+    "code": "en",
+    "iso639_2": "eng",
+    "name": "English",
+    "native": "English",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "de",
+    "iso639_2": "deu",
+    "name": "German",
+    "native": "Deutsch",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "nl",
+    "iso639_2": "nld",
+    "name": "Dutch",
+    "native": "Nederlands",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "sv",
+    "iso639_2": "swe",
+    "name": "Swedish",
+    "native": "Svenska",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "da",
+    "iso639_2": "dan",
+    "name": "Danish",
+    "native": "Dansk",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "no",
+    "iso639_2": "nor",
+    "name": "Norwegian",
+    "native": "Norsk",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "is",
+    "iso639_2": "isl",
+    "name": "Icelandic",
+    "native": "Íslenska",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "af",
+    "iso639_2": "afr",
+    "name": "Afrikaans",
+    "native": "Afrikaans",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "es",
+    "iso639_2": "spa",
+    "name": "Spanish",
+    "native": "Español",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "fr",
+    "iso639_2": "fra",
+    "name": "French",
+    "native": "Français",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "it",
+    "iso639_2": "ita",
+    "name": "Italian",
+    "native": "Italiano",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "pt",
+    "iso639_2": "por",
+    "name": "Portuguese",
+    "native": "Português",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ro",
+    "iso639_2": "ron",
+    "name": "Romanian",
+    "native": "Română",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ca",
+    "iso639_2": "cat",
+    "name": "Catalan",
+    "native": "Català",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "gl",
+    "iso639_2": "glg",
+    "name": "Galician",
+    "native": "Galego",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ru",
+    "iso639_2": "rus",
+    "name": "Russian",
+    "native": "Русский",
+    "script": "Cyrillic",
+    "family": "Indo-European"
+  },
+  {
+    "code": "uk",
+    "iso639_2": "ukr",
+    "name": "Ukrainian",
+    "native": "Українська",
+    "script": "Cyrillic",
+    "family": "Indo-European"
+  },
+  {
+    "code": "pl",
+    "iso639_2": "pol",
+    "name": "Polish",
+    "native": "Polski",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "cs",
+    "iso639_2": "ces",
+    "name": "Czech",
+    "native": "Čeština",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "sk",
+    "iso639_2": "slk",
+    "name": "Slovak",
+    "native": "Slovenčina",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "bg",
+    "iso639_2": "bul",
+    "name": "Bulgarian",
+    "native": "Български",
+    "script": "Cyrillic",
+    "family": "Indo-European"
+  },
+  {
+    "code": "sr",
+    "iso639_2": "srp",
+    "name": "Serbian",
+    "native": "Српски",
+    "script": "Cyrillic/Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "hr",
+    "iso639_2": "hrv",
+    "name": "Croatian",
+    "native": "Hrvatski",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "sl",
+    "iso639_2": "slv",
+    "name": "Slovenian",
+    "native": "Slovenščina",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "lt",
+    "iso639_2": "lit",
+    "name": "Lithuanian",
+    "native": "Lietuvių",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "lv",
+    "iso639_2": "lav",
+    "name": "Latvian",
+    "native": "Latviešu",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "hi",
+    "iso639_2": "hin",
+    "name": "Hindi",
+    "native": "हिन्दी",
+    "script": "Devanagari",
+    "family": "Indo-European"
+  },
+  {
+    "code": "bn",
+    "iso639_2": "ben",
+    "name": "Bengali",
+    "native": "বাংলা",
+    "script": "Bengali",
+    "family": "Indo-European"
+  },
+  {
+    "code": "mr",
+    "iso639_2": "mar",
+    "name": "Marathi",
+    "native": "मराठी",
+    "script": "Devanagari",
+    "family": "Indo-European"
+  },
+  {
+    "code": "gu",
+    "iso639_2": "guj",
+    "name": "Gujarati",
+    "native": "ગુજરાતી",
+    "script": "Gujarati",
+    "family": "Indo-European"
+  },
+  {
+    "code": "pa",
+    "iso639_2": "pan",
+    "name": "Punjabi",
+    "native": "ਪੰਜਾਬੀ / पंजाबी",
+    "script": "Gurmukhi/Shahmukhi",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ur",
+    "iso639_2": "urd",
+    "name": "Urdu",
+    "native": "اردو",
+    "script": "Arabic-Persian",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ne",
+    "iso639_2": "nep",
+    "name": "Nepali",
+    "native": "नेपाली",
+    "script": "Devanagari",
+    "family": "Indo-European"
+  },
+  {
+    "code": "si",
+    "iso639_2": "sin",
+    "name": "Sinhala",
+    "native": "සිංහල",
+    "script": "Sinhala",
+    "family": "Indo-European"
+  },
+  {
+    "code": "fa",
+    "iso639_2": "fas",
+    "name": "Persian (Farsi)",
+    "native": "فارسی",
+    "script": "Arabic-Persian",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ps",
+    "iso639_2": "pus",
+    "name": "Pashto",
+    "native": "پښتو",
+    "script": "Arabic",
+    "family": "Indo-European"
+  },
+  {
+    "code": "sd",
+    "iso639_2": "snd",
+    "name": "Sindhi",
+    "native": "سنڌي / सिन्धी",
+    "script": "Arabic/Devanagari",
+    "family": "Indo-European"
+  },
+  {
+    "code": "te",
+    "iso639_2": "tel",
+    "name": "Telugu",
+    "native": "తెలుగు",
+    "script": "Telugu",
+    "family": "Dravidian"
+  },
+  {
+    "code": "ta",
+    "iso639_2": "tam",
+    "name": "Tamil",
+    "native": "தமிழ்",
+    "script": "Tamil",
+    "family": "Dravidian"
+  },
+  {
+    "code": "kn",
+    "iso639_2": "kan",
+    "name": "Kannada",
+    "native": "ಕನ್ನಡ",
+    "script": "Kannada",
+    "family": "Dravidian"
+  },
+  {
+    "code": "ml",
+    "iso639_2": "mal",
+    "name": "Malayalam",
+    "native": "മലയാളം",
+    "script": "Malayalam",
+    "family": "Dravidian"
+  },
+  {
+    "code": "zh",
+    "iso639_2": "zho",
+    "name": "Chinese (Simplified)",
+    "native": "简体中文",
+    "script": "Han (Simplified)",
+    "family": "Sino-Tibetan"
+  },
+  {
+    "code": "zh-TW",
+    "iso639_2": "zho",
+    "name": "Chinese (Traditional)",
+    "native": "繁體中文",
+    "script": "Han (Traditional)",
+    "family": "Sino-Tibetan"
+  },
+  {
+    "code": "ja",
+    "iso639_2": "jpn",
+    "name": "Japanese",
+    "native": "日本語",
+    "script": "Kanji/Kana",
+    "family": "Japonic"
+  },
+  {
+    "code": "ko",
+    "iso639_2": "kor",
+    "name": "Korean",
+    "native": "한국어",
+    "script": "Hangul",
+    "family": "Koreanic"
+  },
+  {
+    "code": "ar",
+    "iso639_2": "ara",
+    "name": "Arabic",
+    "native": "العربية",
+    "script": "Arabic",
+    "family": "Afro-Asiatic"
+  },
+  {
+    "code": "he",
+    "iso639_2": "heb",
+    "name": "Hebrew",
+    "native": "עברית",
+    "script": "Hebrew",
+    "family": "Afro-Asiatic"
+  },
+  {
+    "code": "am",
+    "iso639_2": "amh",
+    "name": "Amharic",
+    "native": "አማርኛ",
+    "script": "Ge'ez",
+    "family": "Afro-Asiatic"
+  },
+  {
+    "code": "so",
+    "iso639_2": "som",
+    "name": "Somali",
+    "native": "Soomaali",
+    "script": "Latin",
+    "family": "Afro-Asiatic"
+  },
+  {
+    "code": "id",
+    "iso639_2": "ind",
+    "name": "Indonesian",
+    "native": "Bahasa Indonesia",
+    "script": "Latin",
+    "family": "Austronesian"
+  },
+  {
+    "code": "ms",
+    "iso639_2": "msa",
+    "name": "Malay",
+    "native": "Bahasa Melayu",
+    "script": "Latin",
+    "family": "Austronesian"
+  },
+  {
+    "code": "tl",
+    "iso639_2": "tgl",
+    "name": "Tagalog (Filipino)",
+    "native": "Tagalog",
+    "script": "Latin",
+    "family": "Austronesian"
+  },
+  {
+    "code": "vi",
+    "iso639_2": "vie",
+    "name": "Vietnamese",
+    "native": "Tiếng Việt",
+    "script": "Latin (Quốc ngữ)",
+    "family": "Austroasiatic"
+  },
+  {
+    "code": "th",
+    "iso639_2": "tha",
+    "name": "Thai",
+    "native": "ไทย",
+    "script": "Thai",
+    "family": "Kra-Dai"
+  },
+  {
+    "code": "lo",
+    "iso639_2": "lao",
+    "name": "Lao",
+    "native": "ລາວ",
+    "script": "Lao",
+    "family": "Kra-Dai"
+  },
+  {
+    "code": "km",
+    "iso639_2": "khm",
+    "name": "Khmer",
+    "native": "ភាសាខ្មែរ",
+    "script": "Khmer",
+    "family": "Austroasiatic"
+  },
+  {
+    "code": "my",
+    "iso639_2": "mya",
+    "name": "Burmese",
+    "native": "မြန်မာစာ",
+    "script": "Myanmar",
+    "family": "Sino-Tibetan"
+  },
+  {
+    "code": "tr",
+    "iso639_2": "tur",
+    "name": "Turkish",
+    "native": "Türkçe",
+    "script": "Latin",
+    "family": "Turkic"
+  },
+  {
+    "code": "az",
+    "iso639_2": "aze",
+    "name": "Azerbaijani",
+    "native": "Azərbaycan dili",
+    "script": "Latin",
+    "family": "Turkic"
+  },
+  {
+    "code": "kk",
+    "iso639_2": "kaz",
+    "name": "Kazakh",
+    "native": "Қазақ тілі",
+    "script": "Cyrillic",
+    "family": "Turkic"
+  },
+  {
+    "code": "uz",
+    "iso639_2": "uzb",
+    "name": "Uzbek",
+    "native": "Oʻzbekcha",
+    "script": "Latin",
+    "family": "Turkic"
+  },
+  {
+    "code": "fi",
+    "iso639_2": "fin",
+    "name": "Finnish",
+    "native": "Suomi",
+    "script": "Latin",
+    "family": "Uralic"
+  },
+  {
+    "code": "hu",
+    "iso639_2": "hun",
+    "name": "Hungarian",
+    "native": "Magyar",
+    "script": "Latin",
+    "family": "Uralic"
+  },
+  {
+    "code": "et",
+    "iso639_2": "est",
+    "name": "Estonian",
+    "native": "Eesti",
+    "script": "Latin",
+    "family": "Uralic"
+  },
+  {
+    "code": "el",
+    "iso639_2": "ell",
+    "name": "Greek",
+    "native": "Ελληνικά",
+    "script": "Greek",
+    "family": "Indo-European"
+  },
+  {
+    "code": "hy",
+    "iso639_2": "hye",
+    "name": "Armenian",
+    "native": "Հայերեն",
+    "script": "Armenian",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ka",
+    "iso639_2": "kat",
+    "name": "Georgian",
+    "native": "ქართული",
+    "script": "Georgian",
+    "family": "Kartvelian"
+  },
+  {
+    "code": "sq",
+    "iso639_2": "sqi",
+    "name": "Albanian",
+    "native": "Shqip",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "ga",
+    "iso639_2": "gle",
+    "name": "Irish",
+    "native": "Gaeilge",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "cy",
+    "iso639_2": "cym",
+    "name": "Welsh",
+    "native": "Cymraeg",
+    "script": "Latin",
+    "family": "Indo-European"
+  },
+  {
+    "code": "sw",
+    "iso639_2": "swa",
+    "name": "Swahili",
+    "native": "Kiswahili",
+    "script": "Latin",
+    "family": "Niger-Congo"
+  },
+  {
+    "code": "yo",
+    "iso639_2": "yor",
+    "name": "Yoruba",
+    "native": "Yorùbá",
+    "script": "Latin",
+    "family": "Niger-Congo"
+  },
+  {
+    "code": "ig",
+    "iso639_2": "ibo",
+    "name": "Igbo",
+    "native": "Asụsụ Igbo",
+    "script": "Latin",
+    "family": "Niger-Congo"
+  },
+  {
+    "code": "ha",
+    "iso639_2": "hau",
+    "name": "Hausa",
+    "native": "Harshen Hausa",
+    "script": "Latin",
+    "family": "Afro-Asiatic"
+  },
+  {
+    "code": "zu",
+    "iso639_2": "zul",
+    "name": "Zulu",
+    "native": "isiZulu",
+    "script": "Latin",
+    "family": "Niger-Congo"
+  },
+  {
+    "code": "xh",
+    "iso639_2": "xho",
+    "name": "Xhosa",
+    "native": "isiXhosa",
+    "script": "Latin",
+    "family": "Niger-Congo"
+  },
+  {
+    "code": "sn",
+    "iso639_2": "sna",
+    "name": "Shona",
+    "native": "chiShona",
+    "script": "Latin",
+    "family": "Niger-Congo"
+  },
+  {
+    "code": "hinglish",
+    "iso639_2": "hin_eng",
+    "name": "Hinglish (Hindi + English)",
+    "native": "Hinglish",
+    "script": "Latin",
+    "family": "Hybrid Code-Switched"
+  },
+  {
+    "code": "tenglish",
+    "iso639_2": "tel_eng",
+    "name": "Tenglish (Telugu + English)",
+    "native": "Tenglish",
+    "script": "Latin",
+    "family": "Hybrid Code-Switched"
+  },
+  {
+    "code": "spanglish",
+    "iso639_2": "spa_eng",
+    "name": "Spanglish (Spanish + English)",
+    "native": "Spanglish",
+    "script": "Latin",
+    "family": "Hybrid Code-Switched"
+  },
+  {
+    "code": "tanglish",
+    "iso639_2": "tam_eng",
+    "name": "Tanglish (Tamil + English)",
+    "native": "Tanglish",
+    "script": "Latin",
+    "family": "Hybrid Code-Switched"
+  },
+  {
+    "code": "benglish",
+    "iso639_2": "ben_eng",
+    "name": "Benglish (Bengali + English)",
+    "native": "Benglish",
+    "script": "Latin",
+    "family": "Hybrid Code-Switched"
+  }
+]

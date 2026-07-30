@@ -1,0 +1,13 @@
+{
+  "model_file": "mood_emotion_model.onnx",
+  "file_size_kb": 0.03,
+  "input_tensor": "input_features [1, 13]",
+  "output_tensor": "emotion_logits [1, 10]",
+  "opset_version": 14,
+  "supported_runtimes": [
+    "ONNX Runtime Web (WASM)",
+    "TensorFlow Lite",
+    "CoreML"
+  ],
+  "privacy": "100% On-Device Client Inference (No Cloud Data Transfer)"
+}

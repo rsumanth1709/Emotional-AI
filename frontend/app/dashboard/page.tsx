@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { dashboardAPI } from "@/lib/axios";
+import { dashboardAPI, memoryAPI } from "@/lib/axios";
 import type { DashboardData } from "@/types";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
@@ -13,6 +13,8 @@ import WeeklyChart from "@/components/dashboard/WeeklyChart";
 import MonthlyTrendChart from "@/components/dashboard/MonthlyTrend";
 import { Activity, Smile, TrendingUp, AlertCircle, Quote } from "lucide-react";
 import { getEmotionEmoji } from "@/lib/utils";
+import GamificationStats from "@/components/dashboard/GamificationStats";
+import RecommendationWidget from "@/components/dashboard/RecommendationWidget";
 
 const WELLNESS_TIPS = [
   "Take 3 deep box breaths right now: In for 4s, Hold for 4s, Out for 4s.",
@@ -26,6 +28,7 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tip, setTip] = useState("");
 
@@ -38,8 +41,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchDashboard() {
       try {
-        const res = await dashboardAPI.getDashboard();
+        const [res, memRes] = await Promise.all([
+          dashboardAPI.getDashboard(),
+          memoryAPI.getMemories()
+        ]);
         setData(res.data);
+        setMemories(memRes.data);
       } catch (err) {
         // Handle error
       } finally {
@@ -51,6 +58,26 @@ export default function DashboardPage() {
       setTip(WELLNESS_TIPS[Math.floor(Math.random() * WELLNESS_TIPS.length)]);
     }
   }, [user]);
+
+  const handleDeleteMemory = async (id: string) => {
+    if (!confirm("Delete this memory?")) return;
+    try {
+      await memoryAPI.deleteMemory(id);
+      setMemories(memories.filter((m) => m.id !== id));
+    } catch (err) {
+      alert("Failed to delete memory");
+    }
+  };
+
+  const handleClearAllMemories = async () => {
+    if (!confirm("Clear ALL memories?")) return;
+    try {
+      await memoryAPI.deleteAllMemories();
+      setMemories([]);
+    } catch (err) {
+      alert("Failed to clear memories");
+    }
+  };
 
   if (authLoading || loading || !user) {
     return (
@@ -124,6 +151,12 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Gamification progress, challenges, badges */}
+          <GamificationStats />
+
+          {/* AI Personalized Recommendations Widget */}
+          <RecommendationWidget />
+
           {/* Charts Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {data && <EmotionPieChart data={data.emotion_distribution} />}
@@ -131,6 +164,47 @@ export default function DashboardPage() {
           </div>
 
           {data && <MonthlyTrendChart data={data.monthly_trend} />}
+
+          {/* Memory Center */}
+          <div className="glass p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                Memory Center
+              </h3>
+              {memories.length > 0 && (
+                <button
+                  onClick={handleClearAllMemories}
+                  className="text-xs px-3 py-1 bg-red-500/20 text-red-300 rounded hover:bg-red-500/30 transition"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+            {memories.length === 0 ? (
+              <p className="text-slate-400 text-sm">MindCare AI hasn't memorized any facts yet.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                {memories.map((m) => (
+                  <div key={m.id} className="p-3 bg-slate-900/50 rounded-lg flex justify-between items-start border border-slate-700/50">
+                    <div>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${m.role === 'user' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-emerald-500/20 text-emerald-300'} mb-2 inline-block`}>
+                        {m.role}
+                      </span>
+                      <p className="text-sm text-slate-300">{m.content}</p>
+                      <p className="text-xs text-slate-500 mt-1">{new Date(m.created_at).toLocaleString()}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteMemory(m.id)}
+                      className="text-slate-500 hover:text-red-400 transition ml-4"
+                      title="Delete memory"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

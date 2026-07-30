@@ -19,6 +19,10 @@ class JournalEntry(Base):
     content = Column(Text, nullable=False)
     emotion_tag = Column(String, nullable=True)
     mood_score = Column(Integer, nullable=False, default=5)  # 1–10
+    summary = Column(Text, nullable=True)
+    ai_analysis = Column(Text, nullable=True)  # JSON string containing emotion scores, sentiment, stress
+    tags = Column(String, nullable=True)  # comma-separated or json string
+    entry_date = Column(String, nullable=True, index=True)  # YYYY-MM-DD
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -46,6 +50,7 @@ class EmergencyAlert(Base):
     trigger_message = Column(Text, nullable=False)
     flagged_keywords = Column(String, nullable=True)   # comma-separated
     severity = Column(String, nullable=False, default="high")
+    risk_type = Column(String, nullable=True)   # e.g. "suicide", "depression", "panic_attack", "self_harm"
     resolved = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

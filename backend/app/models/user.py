@@ -4,7 +4,7 @@ MindCare AI — User ORM Model
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime, String, Integer
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -21,6 +21,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     consent_given = Column(Boolean, default=False)
+    xp = Column(Integer, default=0)
+    level = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -31,6 +33,11 @@ class User(Base):
     journal_entries = relationship("JournalEntry", back_populates="user", cascade="all, delete-orphan")
     breathing_sessions = relationship("BreathingSession", back_populates="user", cascade="all, delete-orphan")
     emergency_alerts = relationship("EmergencyAlert", back_populates="user", cascade="all, delete-orphan")
+    wellness_goals = relationship("DailyWellnessGoal", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    wellness_logs = relationship("DailyWellnessLog", back_populates="user", cascade="all, delete-orphan")
+    badges = relationship("UserBadge", back_populates="user", cascade="all, delete-orphan")
+    wearable_logs = relationship("WearableLog", back_populates="user", cascade="all, delete-orphan")
+    feedbacks = relationship("UserFeedback", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"

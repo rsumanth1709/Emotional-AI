@@ -28,6 +28,7 @@ class Chat(Base):
     stress_score = Column(Float, nullable=True)   # 0.0 – 10.0
     confidence = Column(Float, nullable=True)     # 0.0 – 1.0
     is_crisis = Column(Boolean, default=False)
+    persona = Column(String, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
