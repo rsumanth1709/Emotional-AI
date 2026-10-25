@@ -417,6 +417,16 @@ def _smart_fallback(text: str, emotion: str, target_lang: str = "en", conversati
     raw_text_lower = text.lower().strip()
     text_lower = raw_text_lower
 
+    # Collect previous assistant messages for deduplication
+    prev_assistant_msgs = []
+    prev_user_msgs = []
+    if conversation_history:
+        for turn in conversation_history:
+            if turn.get("role") == "assistant" and turn.get("content"):
+                prev_assistant_msgs.append(turn.get("content", ""))
+            elif turn.get("role") == "user" and turn.get("content"):
+                prev_user_msgs.append(turn.get("content", "").lower())
+
     # ── Multimodal Facial Snapshot Direct Handler ──────────────────────────
     if "facial snapshot" in raw_text_lower or "snapshot" in raw_text_lower:
         snapshot_replies = {
@@ -430,16 +440,6 @@ def _smart_fallback(text: str, emotion: str, target_lang: str = "en", conversati
         resp = snapshot_replies.get(emotion, snapshot_replies["Neutral"])
         if resp not in prev_assistant_msgs:
             return resp
-
-    # Collect previous assistant messages for deduplication
-    prev_assistant_msgs = []
-    prev_user_msgs = []
-    if conversation_history:
-        for turn in conversation_history:
-            if turn.get("role") == "assistant" and turn.get("content"):
-                prev_assistant_msgs.append(turn.get("content", ""))
-            elif turn.get("role") == "user" and turn.get("content"):
-                prev_user_msgs.append(turn.get("content", "").lower())
 
     # ── Check for Duration / Time Frame Answers ───────────────────────────
     # Detect answers like "past one month", "one week", "3 days", "since last week", etc.

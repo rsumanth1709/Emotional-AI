@@ -345,6 +345,11 @@ class HabitService:
         emotion_records = emotion_service.get_emotion_history(db, user_id, days=days)
         completed_dates = {log.completed_date for log in habit_logs}
 
+        date_stress_map = {}
+        for rec in emotion_records:
+            d = rec.recorded_at.date() if hasattr(rec.recorded_at, "date") else str(rec.recorded_at)[:10]
+            date_stress_map.setdefault(d, []).append(rec.stress_score or 5.0)
+
         habit_day_stresses = []
         missed_day_stresses = []
 

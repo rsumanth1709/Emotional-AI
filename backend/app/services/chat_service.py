@@ -370,6 +370,7 @@ class ChatService:
 
         sources_data = [RAGSource(**c) for c in rag_citations] if rag_citations else None
 
+
         return ChatResponse(
             message_id=message_id,
             session_id=session_id,
@@ -632,6 +633,7 @@ class ChatService:
         )
 
         sources_data = [RAGSource(**c) for c in rag_citations] if rag_citations else None
+        diag_intent = "crisis_safety" if is_crisis else "multimodal_wellness"
 
         return ChatResponse(
             message_id=message_id,
