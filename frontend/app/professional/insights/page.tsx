@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProfessionalGuard from "@/components/auth/ProfessionalGuard";
 import { professionalAPI } from "@/lib/axios";
@@ -9,7 +9,7 @@ import { Sparkles, AlertTriangle, ArrowLeft, Heart, TrendingUp, ShieldCheck } fr
 import toast from "react-hot-toast";
 import MindCareLoading from "@/components/ui/MindCareLoading";
 
-export default function ProfessionalInsightsPage() {
+function ProfessionalInsightsContent() {
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
 
@@ -161,5 +161,13 @@ export default function ProfessionalInsightsPage() {
         </div>
       </div>
     </ProfessionalGuard>
+  );
+}
+
+export default function ProfessionalInsightsPage() {
+  return (
+    <Suspense fallback={<MindCareLoading message="Decrypting Consented Clinical Summary..." />}>
+      <ProfessionalInsightsContent />
+    </Suspense>
   );
 }

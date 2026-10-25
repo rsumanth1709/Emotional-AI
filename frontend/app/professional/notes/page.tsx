@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProfessionalGuard from "@/components/auth/ProfessionalGuard";
 import { professionalAPI } from "@/lib/axios";
@@ -8,7 +8,7 @@ import type { ProfessionalAssignment, ProfessionalNote } from "@/types";
 import { FileText, Plus, Clock, User, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 
-export default function ProfessionalNotesPage() {
+function ProfessionalNotesContent() {
   const searchParams = useSearchParams();
   const initialClientId = searchParams.get("clientId") || "";
 
@@ -174,5 +174,13 @@ export default function ProfessionalNotesPage() {
         </div>
       </div>
     </ProfessionalGuard>
+  );
+}
+
+export default function ProfessionalNotesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading clinical notes...</div>}>
+      <ProfessionalNotesContent />
+    </Suspense>
   );
 }
