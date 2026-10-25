@@ -17,6 +17,7 @@ import {
   Gauge, FileCode2, AlertTriangle, CheckCircle2, Clock,
   Wifi, WifiOff, Play, RotateCcw, Network
 } from "lucide-react";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 // ─── Neural Network Architecture Diagram ─────────────────────────────────────
 function NetworkDiagram({ activations }: { activations: InferenceResult["layerActivations"] | null }) {
@@ -237,12 +238,7 @@ export default function OnDeviceAIPage() {
   ];
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 gap-3">
-        <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
-        Loading On-Device AI Engine…
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   const sortedEmotions = result

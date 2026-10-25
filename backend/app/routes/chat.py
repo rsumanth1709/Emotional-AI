@@ -5,10 +5,11 @@ POST /chat, GET /chat/sessions, GET /chat/sessions/{session_id}, DELETE /chat/se
 import uuid
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, Query, Form, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Form, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.chat import Chat
 from app.models.user import User
 from app.schemas.chat import (
     ChatRequest, ChatResponse, ChatHistoryItem, SessionSummary,
@@ -53,17 +54,29 @@ def list_sessions(current_user: CurrentUser, db: DBDep):
 
 @router.get("/sessions/{session_id}", response_model=List[ChatHistoryItem])
 def get_session(session_id: str, current_user: CurrentUser, db: DBDep):
-    """Get all messages in a specific chat session."""
+    """Get all messages in a specific chat session with strict resource ownership."""
+    session_exists = (
+        db.query(Chat)
+        .filter(Chat.user_id == current_user.id, Chat.session_id == session_id)
+        .first()
+    )
+    if not session_exists:
+        raise HTTPException(status_code=404, detail="Chat session not found")
     messages = chat_service.get_session_messages(db, current_user.id, session_id)
     return [ChatHistoryItem.model_validate(m) for m in messages]
 
 
 @router.delete("/sessions/{session_id}")
 def delete_session(session_id: str, current_user: CurrentUser, db: DBDep):
-    """Delete a chat session and all its messages."""
-    deleted = chat_service.delete_session(db, current_user.id, session_id)
-    if not deleted:
-        return {"message": "Session not found or already deleted."}
+    """Delete a chat session and all its messages with strict resource ownership."""
+    session_exists = (
+        db.query(Chat)
+        .filter(Chat.user_id == current_user.id, Chat.session_id == session_id)
+        .first()
+    )
+    if not session_exists:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    chat_service.delete_session(db, current_user.id, session_id)
     return {"message": "Session deleted successfully."}
 
 
@@ -73,13 +86,15 @@ def send_multimodal_message(
     current_user: CurrentUser,
     message: Optional[str] = Form(None),
     session_id: Optional[str] = Form(None),
+    persona: Optional[str] = Form("friendly"),
     audio: Optional[UploadFile] = File(None),
     image: Optional[UploadFile] = File(None),
+    file: Optional[UploadFile] = File(None),
 ):
     """
     Multimodal chat endpoint. Accepts optional message text, voice recording, 
-    and webcam snapshot, performing emotion analysis on all inputs before 
-    generating the assistant response.
+    webcam snapshot, and any uploaded file (PDF, documents, spreadsheets, images, code, audio, etc.),
+    performing deep content extraction and emotion analysis before generating the assistant response.
     """
     import tempfile
     import shutil
@@ -99,6 +114,20 @@ def send_multimodal_message(
             shutil.copyfileobj(image.file, tmp)
             image_path = tmp.name
 
+    file_path = None
+    file_name = None
+    target_upload = file or image
+    if file:
+        file_name = file.filename or "uploaded_file"
+        suffix = "." + file_name.split(".")[-1] if "." in file_name else ".bin"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            file_path = tmp.name
+    elif image and not (image.filename or "").lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+        # If passed as 'image' but is actually another file format
+        file_name = image.filename or "uploaded_file"
+        file_path = image_path
+
     try:
         return chat_service.process_multimodal_message(
             db=db,
@@ -107,9 +136,23 @@ def send_multimodal_message(
             session_id=session_id,
             audio_path=audio_path,
             image_path=image_path,
+            file_path=file_path,
+            original_filename=file_name,
+            persona=persona,
         )
     finally:
         if audio_path and os.path.exists(audio_path):
-            os.unlink(audio_path)
-        if image_path and os.path.exists(image_path):
-            os.unlink(image_path)
+            try:
+                os.unlink(audio_path)
+            except Exception:
+                pass
+        if image_path and os.path.exists(image_path) and image_path != file_path:
+            try:
+                os.unlink(image_path)
+            except Exception:
+                pass
+        if file_path and os.path.exists(file_path):
+            try:
+                os.unlink(file_path)
+            except Exception:
+                pass

@@ -7,15 +7,115 @@ export interface User {
   full_name: string | null;
   is_active: boolean;
   is_admin: boolean;
+  roles?: string[];
+  permissions?: string[];
+  account_status?: string;
+  email_verified?: boolean;
+  mfa_enabled?: boolean;
   xp: number;
   level: number;
+  auth_provider?: string;
+  avatar_url?: string | null;
+  google_id?: string | null;
   created_at: string;
 }
 
 export interface AuthTokens {
   access_token: string;
+  refresh_token?: string;
   token_type: string;
   user: User;
+}
+
+export interface ConsentRecord {
+  id: string;
+  user_id: string;
+  data_category?: string;
+  authorized_recipient?: string;
+  purpose?: string;
+  granted: boolean;
+  granted_at?: string;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+}
+
+export interface ProfessionalProfile {
+  id: string;
+  user_id: string;
+  verification_status: "PENDING" | "VERIFIED" | "REJECTED" | "SUSPENDED";
+  credentials_reference?: string;
+  license_number?: string;
+  license_issuer?: string;
+  specialty?: string;
+  bio?: string;
+  verified_at?: string;
+  verified_by?: string;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfessionalAssignment {
+  id: string;
+  professional_id: string;
+  user_id: string;
+  client_name?: string;
+  client_email?: string;
+  status: string;
+  consent_id?: string;
+  created_at: string;
+  ended_at?: string | null;
+}
+
+export interface ProfessionalNote {
+  id: string;
+  professional_id: string;
+  client_id: string;
+  title: string;
+  notes_text: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientSharedSummary {
+  client_id: string;
+  client_name?: string;
+  client_email?: string;
+  data_category_authorized: string;
+  mood_summary: {
+    average_score: number;
+    total_entries: number;
+    recent_scores: number[];
+  };
+  recent_emotion_trends: Array<{ emotion: string; frequency: number }>;
+  wellness_goals_summary?: {
+    water_target: number;
+    sleep_target_hours: number;
+  } | null;
+  ai_insights: string[];
+  generated_at: string;
+  disclaimer: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  actor_user_id?: string;
+  actor_role?: string;
+  action: string;
+  resource_type?: string;
+  resource_id?: string;
+  outcome: string;
+  correlation_id?: string;
+  details?: string;
+  timestamp: string;
+}
+
+export interface RAGSource {
+  document_id: string;
+  title: string;
+  source_name: string;
+  source_url: string;
+  relevance_score?: number;
 }
 
 export interface Message {
@@ -27,7 +127,13 @@ export interface Message {
   stress_score?: number;
   confidence?: number;
   is_crisis?: boolean;
+  intent?: string;
   persona?: string;
+  image_url?: string;
+  audio_url?: string;
+  file_name?: string;
+  file_url?: string;
+  sources?: RAGSource[];
   created_at: string;
 }
 
@@ -50,11 +156,13 @@ export interface ChatResponse {
   session_id: string;
   response: string;
   emotion_result: EmotionResult;
+  intent?: string;
   is_crisis: boolean;
   crisis_severity?: string;
   crisis_type?: string;
   crisis_resources?: CrisisResource[];
   persona?: string;
+  sources?: RAGSource[];
   timestamp: string;
 }
 
@@ -277,6 +385,8 @@ export interface PredictiveInsightItem {
   title: string;
   description: string;
   type: "tip" | "warning" | "insight";
+  contributing_factors?: string[];
+  preventive_recommendations?: string[];
 }
 
 export interface PredictiveForecastResponse {
@@ -462,4 +572,26 @@ export interface UserPreferencesResponse {
   recent_feedback: FeedbackItem[];
   learning_status: "gathering_data" | "learning" | "adapting" | "personalised";
   model_confidence: number;
+}
+
+export interface GameSessionRecord {
+  id: string;
+  user_id: string;
+  game_slug: string;
+  score: number;
+  total_questions: number;
+  correct_count: number;
+  difficulty: string;
+  duration_seconds: number;
+  completed_at: string;
+  xp_awarded?: number;
+  new_total_xp?: number;
+  current_level?: number;
+}
+
+export interface GameHistoryData {
+  items: GameSessionRecord[];
+  total_sessions: number;
+  high_score: number;
+  total_score: number;
 }

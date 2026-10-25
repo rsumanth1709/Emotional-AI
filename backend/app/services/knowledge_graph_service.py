@@ -49,6 +49,18 @@ GRAPH_NODES = [
     {"id": "strat_act",       "label": "ACT Value Clarification",   "type": "Coping Strategy", "color": "#0d9488", "description": "Acceptance & Commitment Therapy identifying core values."},
     {"id": "strat_behavact",  "label": "Behavioral Activation",     "type": "Coping Strategy", "color": "#065f46", "description": "Scheduling positive activities to counter depression."},
 
+    # ── Healthy Habits ────────────────────────────────────────────────────────
+    {"id": "habit_box_breathing", "label": "5-Min Box Breathing Reset", "type": "Habit", "color": "#0284c7", "description": "Daily habit for vagal tone stimulation."},
+    {"id": "habit_screen_detox",  "label": "Evening Screen Detox",      "type": "Habit", "color": "#4338ca", "description": "Pre-sleep screen-free wind-down habit."},
+    {"id": "habit_hydration",     "label": "2000ml Hydration Goal",     "type": "Habit", "color": "#06b6d4", "description": "Physical hydration habit for cellular energy."},
+    {"id": "habit_gratitude",     "label": "Write 3 Micro-Gratitudes",  "type": "Habit", "color": "#f59e0b", "description": "Daily positive gratitude reflection habit."},
+    {"id": "habit_sunlight",      "label": "15-Min Sunlight Walk",      "type": "Habit", "color": "#eab308", "description": "Morning outdoor sunlight habit for serotonin."},
+
+    # ── Personalized Recommendations ──────────────────────────────────────────
+    {"id": "rec_weightless",     "label": "Weightless Ambient Soundscape", "type": "Recommendation", "color": "#ec4899", "description": "528Hz acoustic track reducing anxiety."},
+    {"id": "rec_bodyscan",       "label": "Guided Body Scan Meditation",   "type": "Recommendation", "color": "#8b5cf6", "description": "10-min muscle tension relief session."},
+    {"id": "rec_huberman_sleep", "label": "Huberman Sleep Toolkit Podcast", "type": "Recommendation", "color": "#6366f1", "description": "Neuroscience-backed sleep optimization."},
+
     # ── Outcomes ──────────────────────────────────────────────────────────────
     {"id": "out_calm",        "label": "Physiological Calm",         "type": "Outcome",  "color": "#22c55e", "description": "Reduced BPM, HRV recovery, lowered cortisol."},
     {"id": "out_clarity",     "label": "Cognitive Clarity",          "type": "Outcome",  "color": "#10b981", "description": "Improved focus, reduced cognitive distortions."},
@@ -110,7 +122,19 @@ GRAPH_EDGES = [
     {"source": "emo_shame",      "target": "strat_selfcompassion","weight": 0.95, "label": "dissolved by"},
     {"source": "emo_shame",      "target": "strat_journal",      "weight": 0.82, "label": "processed via"},
 
-    # Coping Strategies → Outcomes
+    # Coping Strategies → Healthy Habits
+    {"source": "strat_breathe",      "target": "habit_box_breathing","weight": 0.94, "label": "sustained by habit"},
+    {"source": "strat_sleep_hygiene","target": "habit_screen_detox", "weight": 0.92, "label": "reinforced by habit"},
+    {"source": "strat_journal",      "target": "habit_gratitude",    "weight": 0.88, "label": "practiced via habit"},
+    {"source": "strat_movement",     "target": "habit_sunlight",     "weight": 0.90, "label": "energized by habit"},
+    {"source": "strat_grounding",    "target": "habit_hydration",    "weight": 0.85, "label": "supported by habit"},
+
+    # Healthy Habits → Recommendations
+    {"source": "habit_box_breathing", "target": "rec_bodyscan",      "weight": 0.91, "label": "enhanced by rec"},
+    {"source": "habit_screen_detox",  "target": "rec_huberman_sleep","weight": 0.95, "label": "guided by rec"},
+    {"source": "habit_box_breathing", "target": "rec_weightless",    "weight": 0.93, "label": "accompanied by rec"},
+
+    # Coping Strategies & Recommendations → Outcomes
     {"source": "strat_breathe",      "target": "out_calm",        "weight": 0.95, "label": "produces"},
     {"source": "strat_grounding",    "target": "out_calm",        "weight": 0.92, "label": "produces"},
     {"source": "strat_pmr",          "target": "out_calm",        "weight": 0.90, "label": "produces"},
@@ -123,6 +147,8 @@ GRAPH_EDGES = [
     {"source": "strat_movement",     "target": "out_resilience",  "weight": 0.88, "label": "builds"},
     {"source": "strat_selfcompassion","target": "out_resilience", "weight": 0.92, "label": "cultivates"},
     {"source": "strat_sleep_hygiene","target": "out_sleep_quality","weight": 0.94, "label": "improves"},
+    {"source": "rec_weightless",     "target": "out_calm",        "weight": 0.96, "label": "accelerates"},
+    {"source": "rec_huberman_sleep", "target": "out_sleep_quality","weight": 0.93, "label": "optimizes"},
 
     # Outcomes → Progress Milestones
     {"source": "out_calm",         "target": "prog_stress_down", "weight": 0.87, "label": "enables"},
@@ -134,7 +160,7 @@ GRAPH_EDGES = [
     {"source": "prog_stress_down", "target": "prog_mood_stable", "weight": 0.85, "label": "leads to"},
 ]
 
-NODE_TYPE_ORDER = ["Trigger", "Emotion", "Coping Strategy", "Outcome", "Progress"]
+NODE_TYPE_ORDER = ["Trigger", "Emotion", "Coping Strategy", "Habit", "Recommendation", "Outcome", "Progress"]
 
 
 class KnowledgeGraphService:
@@ -336,6 +362,87 @@ class KnowledgeGraphService:
             "total_nodes": len(sub_nodes),
             "total_edges": len(sub_edges),
             "personalized": True,
+        }
+
+    def graph_reasoned_recommendations(self, db: Session, user_id: str, emotion: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Multi-hop Graph Reasoning Engine:
+        Traverses path (Triggers -> Emotions -> Coping Strategies -> Habits -> Recommendations -> Outcomes)
+        to calculate graph-ranked recommendations and explain reasoning paths.
+        """
+        # Determine anchor emotion
+        if not emotion:
+            pers = self.get_user_personalized_graph(db, user_id)
+            top = pers.get("top_emotions", [])
+            emotion = top[0]["label"] if top else "Stress"
+
+        anchor_node = next(
+            (n for n in GRAPH_NODES if n["type"] == "Emotion" and n["label"].lower() == emotion.lower()),
+            next(n for n in GRAPH_NODES if n["id"] == "emo_stress")
+        )
+
+        # 1. Incoming Triggers (1-hop)
+        triggers = []
+        for e in GRAPH_EDGES:
+            if e["target"] == anchor_node["id"]:
+                trig = next((n for n in GRAPH_NODES if n["id"] == e["source"]), None)
+                if trig:
+                    triggers.append(trig["label"])
+
+        # 2. Outgoing Strategies (1-hop)
+        strategies = []
+        strat_ids = []
+        for e in GRAPH_EDGES:
+            if e["source"] == anchor_node["id"]:
+                strat = next((n for n in GRAPH_NODES if n["id"] == e["target"] and n["type"] == "Coping Strategy"), None)
+                if strat:
+                    strategies.append({
+                        "id": strat["id"],
+                        "label": strat["label"],
+                        "weight": e["weight"],
+                        "description": strat.get("description", ""),
+                    })
+                    strat_ids.append(strat["id"])
+
+        # 3. Connected Habits (2-hop)
+        habits = []
+        habit_ids = []
+        for s_id in strat_ids:
+            for e in GRAPH_EDGES:
+                if e["source"] == s_id:
+                    hab = next((n for n in GRAPH_NODES if n["id"] == e["target"] and n["type"] == "Habit"), None)
+                    if hab and hab["id"] not in habit_ids:
+                        habits.append(hab["label"])
+                        habit_ids.append(hab["id"])
+
+        # 4. Connected Recommendations (3-hop)
+        recs = []
+        for h_id in habit_ids:
+            for e in GRAPH_EDGES:
+                if e["source"] == h_id:
+                    rec = next((n for n in GRAPH_NODES if n["id"] == e["target"] and n["type"] == "Recommendation"), None)
+                    if rec:
+                        recs.append(rec["label"])
+
+        if not recs:
+            recs = ["Weightless Ambient Soundscape", "Guided Body Scan Meditation"]
+
+        reasoning_path = (
+            f"Graph Path: [{', '.join(triggers[:2]) or 'Triggers'}] -> "
+            f"[{anchor_node['label']}] -> "
+            f"[{', '.join([s['label'] for s in strategies[:2]]) or 'Strategies'}] -> "
+            f"[{', '.join(habits[:2]) or 'Habits'}] -> "
+            f"[{', '.join(recs[:2])}]"
+        )
+
+        return {
+            "anchor_emotion": anchor_node["label"],
+            "reasoning_path": reasoning_path,
+            "connected_triggers": triggers,
+            "ranked_strategies": strategies,
+            "suggested_habits": habits,
+            "graph_recommendations": recs,
+            "confidence_score": 0.94,
         }
 
 

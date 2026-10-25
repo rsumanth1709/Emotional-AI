@@ -4,7 +4,7 @@ MindCare AI — Emotion & Mood ORM Models
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, String
+from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, String, Boolean, Integer
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -20,6 +20,13 @@ class EmotionRecord(Base):
     sentiment = Column(String, nullable=False)
     stress_score = Column(Float, nullable=False)   # 0.0 – 10.0
     confidence = Column(Float, nullable=False)     # 0.0 – 1.0
+    source = Column(String, default="text")            # "text", "image", "multimodal"
+    face_count = Column(Integer, default=0)
+    visual_emotion = Column(String, nullable=True)
+    visual_confidence = Column(Float, nullable=True)
+    multimodal_emotion = Column(String, nullable=True)
+    multimodal_confidence = Column(Float, nullable=True)
+    agreement = Column(Boolean, nullable=True)
     recorded_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="emotion_records")

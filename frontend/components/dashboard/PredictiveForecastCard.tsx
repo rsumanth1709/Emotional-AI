@@ -257,6 +257,39 @@ export default function PredictiveForecastCard() {
                 <span>{item.title}</span>
               </h5>
               <p className="text-xs leading-relaxed opacity-90">{item.description}</p>
+
+              {/* Contributing Factors */}
+              {item.contributing_factors && item.contributing_factors.length > 0 && (
+                <div className="pt-2 border-t border-white/5 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                    Contributing Stress Factors:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.contributing_factors.map((factor: string, fIdx: number) => (
+                      <span key={fIdx} className="px-2 py-0.5 rounded text-[10px] bg-slate-900 border border-slate-800 text-slate-300">
+                        • {factor}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Preventive Recommendations */}
+              {item.preventive_recommendations && item.preventive_recommendations.length > 0 && (
+                <div className="pt-2 border-t border-white/5 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 block">
+                    Preventive Recommendations:
+                  </span>
+                  <ul className="space-y-1">
+                    {item.preventive_recommendations.map((rec: string, rIdx: number) => (
+                      <li key={rIdx} className="text-[11px] text-slate-300 flex items-start gap-1.5">
+                        <span className="text-emerald-400 text-xs">✓</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -29,32 +29,47 @@ os.makedirs(CHROMA_DB_DIR, exist_ok=True)
 
 class MemoryService:
     def __init__(self):
-        self._fallback_memories: List[Dict] = []  # Fallback memory store when chromadb/ST unavailable
+        self._fallback_memories: List[Dict] = []
+        self._client = None
+        self._collection = None
+        self._embedder = None
+        self._chroma_initialized = False
 
-        if chromadb is None or SentenceTransformer is None:
-            logger.warning("MemoryService running in lightweight fallback mode (in-memory keyword index).")
-            self.client = None
-            self.collection = None
-            self.embedder = None
+    def _init_chroma(self):
+        if self._chroma_initialized:
             return
-
+        self._chroma_initialized = True
+        if chromadb is None:
+            logger.warning("MemoryService running in lightweight fallback mode (in-memory keyword index).")
+            return
         try:
-            # We use local persistent ChromaDB
-            self.client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
-            # Create or get a collection for conversation memory
-            self.collection = self.client.get_or_create_collection(
+            self._client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+            self._collection = self._client.get_or_create_collection(
                 name="user_memory",
                 metadata={"hnsw:space": "cosine"}
             )
-            # Load the embedding model
-            logger.info("Loading SentenceTransformer model for MemoryService...")
-            self.embedder = SentenceTransformer("all-MiniLM-L6-v2")
-            logger.info("MemoryService initialized successfully with ChromaDB + SentenceTransformers.")
+            logger.info("ChromaDB initialized for MemoryService.")
         except Exception as e:
-            logger.error(f"Failed to initialize ChromaDB/SentenceTransformers: {e}. Falling back to in-memory mode.")
-            self.client = None
-            self.collection = None
-            self.embedder = None
+            logger.error(f"Failed to initialize ChromaDB: {e}. Falling back to in-memory mode.")
+            self._client = None
+            self._collection = None
+
+    @property
+    def collection(self):
+        self._init_chroma()
+        return self._collection
+
+    @property
+    def embedder(self):
+        if self._embedder is None and SentenceTransformer is not None:
+            try:
+                logger.info("Lazy loading SentenceTransformer model for MemoryService...")
+                self._embedder = SentenceTransformer("all-MiniLM-L6-v2")
+                logger.info("MemoryService embedder loaded successfully.")
+            except Exception as e:
+                logger.error(f"Failed to load SentenceTransformer embedder: {e}")
+                self._embedder = None
+        return self._embedder
 
     def add_memory(self, user_id: str, session_id: str, role: str, content: str, memory_type: str = "message"):
         """

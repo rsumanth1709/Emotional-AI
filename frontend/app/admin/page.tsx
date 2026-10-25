@@ -36,6 +36,8 @@ interface AdminDashboardData {
   }>;
 }
 
+import MindCareLoading from "@/components/ui/MindCareLoading";
+
 export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -86,11 +88,7 @@ export default function AdminPage() {
   };
 
   if (authLoading || !user || !user.is_admin) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Loading admin console...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

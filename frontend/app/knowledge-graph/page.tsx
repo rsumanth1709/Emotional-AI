@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import KnowledgeGraphVisualizer from "@/components/research/KnowledgeGraphVisualizer";
 import { RefreshCw, GitFork } from "lucide-react";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 export default function KnowledgeGraphPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -17,12 +18,7 @@ export default function KnowledgeGraphPage() {
   }, [user, authLoading, router]);
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 gap-3">
-        <RefreshCw className="w-5 h-5 animate-spin text-amber-400" />
-        Loading Knowledge Graph…
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

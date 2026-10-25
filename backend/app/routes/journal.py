@@ -148,6 +148,19 @@ def create_entry(data: JournalCreate, current_user: CurrentUser, db: DBDep):
     return JournalResponse.model_validate(entry)
 
 
+@router.get("/{entry_id}", response_model=JournalResponse)
+def get_entry(entry_id: str, current_user: CurrentUser, db: DBDep):
+    """Retrieve a single journal entry belonging to the authenticated user."""
+    entry = (
+        db.query(JournalEntry)
+        .filter(JournalEntry.id == entry_id, JournalEntry.user_id == current_user.id)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Journal entry not found")
+    return JournalResponse.model_validate(entry)
+
+
 @router.put("/{entry_id}", response_model=JournalResponse)
 def update_entry(entry_id: str, data: JournalUpdate, current_user: CurrentUser, db: DBDep):
     """Update an existing journal entry."""

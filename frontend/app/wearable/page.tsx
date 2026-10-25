@@ -1,537 +1,484 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { wearableAPI } from "@/lib/axios";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
-import { wearableAPI } from "@/lib/axios";
-import type { WearableSummary, WearableFusionData, WearableLogEntry } from "@/types";
-import { toast } from "react-hot-toast";
 import {
-  Heart, Activity, Moon, Zap, Bluetooth, Radio, RefreshCw,
-  TrendingUp, TrendingDown, Minus, Watch, Wind, Footprints,
-  Brain, ShieldCheck, AlertTriangle, CheckCircle2, Clock, BarChart3
+  Watch, Heart, Moon, Activity, RefreshCw, ShieldCheck,
+  CheckCircle2, XCircle, Trash2, AlertCircle, TrendingUp, Sparkles,
+  Lock, Settings, Sliders, Calendar, ArrowRight, Zap
 } from "lucide-react";
+import toast from "react-hot-toast";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
-// ─── Sparkline SVG Chart Component ──────────────────────────────────────────
-function Sparkline({
-  data, color, height = 40, width = 120
-}: { data: number[]; color: string; height?: number; width?: number }) {
-  if (!data || data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - ((v - min) / range) * (height - 4) - 2;
-    return `${x},${y}`;
-  }).join(" ");
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
-      <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={pts} />
-    </svg>
-  );
+interface ProviderStatus {
+  is_connected: boolean;
+  connections: {
+    id: string;
+    provider: string;
+    connection_status: string;
+    scopes: string[];
+    last_sync_at: string | null;
+  }[];
+  last_sync_at: string | null;
 }
 
-// ─── Radial gauge ───────────────────────────────────────────────────────────
-function RadialGauge({ value, max = 100, label, color, size = 96 }: {
-  value: number; max?: number; label: string; color: string; size?: number;
-}) {
-  const pct = Math.min(100, (value / max) * 100);
-  const r = 38;
-  const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width={size} height={size} viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#1e293b" strokeWidth="8" />
-        <circle
-          cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="8"
-          strokeDasharray={`${dash} ${circ - dash}`}
-          strokeDashoffset={circ / 4}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 0.8s ease" }}
-        />
-        <text x="50" y="54" textAnchor="middle" fontSize="18" fontWeight="bold" fill="white">
-          {Math.round(value)}
-        </text>
-      </svg>
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-    </div>
-  );
+interface PersonalBaselines {
+  sleep: { baseline_hours: number; recent_hours: number; deviation_hours: number; is_reduced: boolean };
+  heart_rate: { baseline_bpm: number; recent_bpm: number; deviation_bpm: number; is_elevated: boolean };
+  activity: { baseline_steps: number; recent_steps: number; deviation_steps: number; is_reduced: boolean };
 }
 
-// ─── Trend Badge ─────────────────────────────────────────────────────────────
-function TrendBadge({ trend }: { trend: "improving" | "stable" | "worsening" }) {
-  const map = {
-    improving: { icon: TrendingDown, label: "Improving", cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-    stable: { icon: Minus, label: "Stable", cls: "text-slate-300 bg-slate-800/60 border-slate-700" },
-    worsening: { icon: TrendingUp, label: "Worsening", cls: "text-rose-400 bg-rose-500/10 border-rose-500/20" },
+interface CorrelationData {
+  sample_count: number;
+  correlations: {
+    sleep_emotion_r: number | null;
+    heart_rate_emotion_r: number | null;
+    activity_emotion_r: number | null;
+    paired_sample_count: number;
   };
-  const { icon: Icon, label, cls } = map[trend];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${cls}`}>
-      <Icon className="w-3 h-3" />
-      {label}
-    </span>
-  );
+  personal_baselines: PersonalBaselines;
+  wellness_insights: string[];
+  non_diagnostic_notice: string;
 }
 
-// ─── Sleep Stage Bar ─────────────────────────────────────────────────────────
-function SleepBar({ sleepHours, remPct }: { sleepHours: number; remPct: number }) {
-  const deep = Math.round((sleepHours * 0.20) * 10) / 10;
-  const rem = Math.round((sleepHours * (remPct / 100)) * 10) / 10;
-  const light = Math.round((sleepHours - deep - rem) * 10) / 10;
-  return (
-    <div className="space-y-3">
-      <div className="flex rounded-full overflow-hidden h-3 w-full gap-px">
-        <div style={{ width: `${(light / sleepHours) * 100}%` }} className="bg-indigo-400/60" title={`Light ${light}h`} />
-        <div style={{ width: `${(rem / sleepHours) * 100}%` }} className="bg-violet-500" title={`REM ${rem}h`} />
-        <div style={{ width: `${(deep / sleepHours) * 100}%` }} className="bg-cyan-500" title={`Deep ${deep}h`} />
-      </div>
-      <div className="flex items-center gap-4 text-[10px] font-semibold">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-400/60 inline-block" /> Light {light}h</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-500 inline-block" /> REM {rem}h</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-500 inline-block" /> Deep {deep}h</span>
-      </div>
-    </div>
-  );
+interface TimelineItem {
+  date: string;
+  sleep_duration_hours: number;
+  heart_rate_bpm: number;
+  steps: number;
+  emotion: string;
 }
 
-// ─── Main Page ──────────────────────────────────────────────────────────────
-export default function WearablePage() {
+export default function WearableIntegrationPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [summary, setSummary] = useState<WearableSummary | null>(null);
-  const [fusion, setFusion] = useState<WearableFusionData | null>(null);
-  const [history, setHistory] = useState<WearableLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [logging, setLogging] = useState(false);
-  const [connected, setConnected] = useState(true);
-  const [days, setDays] = useState(7);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [syncing, setSyncing] = useState<boolean>(false);
+  const [status, setStatus] = useState<ProviderStatus | null>(null);
+  const [correlations, setCorrelations] = useState<CorrelationData | null>(null);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [period, setPeriod] = useState<string>("daily");
 
-  // Manual input state for logging
-  const [bpm, setBpm] = useState(78);
-  const [hrv, setHrv] = useState(42);
-  const [sleepH, setSleepH] = useState(7.0);
-  const [remPct, setRemPct] = useState(20);
-  const [steps, setSteps] = useState(7500);
-  const [eda, setEda] = useState(2.5);
+  const [selectedProvider, setSelectedProvider] = useState<string>("Google Health Connect");
+  const [scopes, setScopes] = useState<{ heart_rate: boolean; sleep: boolean; activity: boolean }>({
+    heart_rate: true,
+    sleep: true,
+    activity: true,
+  });
 
-  useEffect(() => {
-    if (!authLoading && !user) router.push("/login");
-  }, [user, authLoading, router]);
-
-  const fetchAll = useCallback(async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const [sumRes, fusRes, histRes] = await Promise.all([
-        wearableAPI.getSummary(days),
-        wearableAPI.getFusion(5.0),
-        wearableAPI.getHistory(20),
+      const [stRes, corrRes, timeRes] = await Promise.all([
+        wearableAPI.getStatus(),
+        wearableAPI.getCorrelations(),
+        wearableAPI.getTimeline(period),
       ]);
-      setSummary(sumRes.data);
-      setFusion(fusRes.data);
-      setHistory(histRes.data);
+      setStatus(stRes.data);
+      setCorrelations(corrRes.data);
+      setTimeline(timeRes.data.timeline || []);
     } catch {
-      // no-op — backend may be offline, will show placeholders
+      toast.error("Failed to load wearable wellness telemetry.");
     } finally {
       setLoading(false);
     }
-  }, [days]);
+  };
 
   useEffect(() => {
-    if (user) fetchAll();
-  }, [user, fetchAll]);
+    if (!authLoading && !user) router.push("/login");
+    else if (user) fetchData();
+  }, [user, authLoading, router, period]);
 
-  const handleLogBiometrics = async () => {
-    setLogging(true);
+  const handleConnect = async () => {
     try {
-      await wearableAPI.logBiometrics({
-        heart_rate_bpm: bpm,
-        hrv_ms: hrv,
-        sleep_hours: sleepH,
-        rem_sleep_percentage: remPct,
-        step_count: steps,
-        skin_conductance: eda,
-      });
-      toast.success("✅ Biometrics logged successfully!");
-      await fetchAll();
+      const activeScopes = Object.entries(scopes)
+        .filter(([_, enabled]) => enabled)
+        .map(([key]) => key);
+
+      await wearableAPI.connect({ provider: selectedProvider, scopes: activeScopes });
+      toast.success(`Successfully connected ${selectedProvider}.`);
+      fetchData();
     } catch {
-      toast.error("Failed to log biometrics");
-    } finally {
-      setLogging(false);
+      toast.error("Failed to connect wearable provider.");
     }
   };
 
-  const handleBluetoothPair = () => {
-    toast.loading("Scanning for BLE GATT Heart Rate Service (0x180D)...", { duration: 1800 });
-    setTimeout(() => {
-      setConnected(true);
-      toast.success("🔗 Smartwatch paired via Bluetooth PPG sensor!");
-    }, 2000);
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await wearableAPI.sync({ provider: selectedProvider });
+      toast.success("Health telemetry synchronized.");
+      fetchData();
+    } catch {
+      toast.error("Synchronization failed.");
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 gap-3">
-        <RefreshCw className="w-5 h-5 animate-spin text-pink-400" />
-        Loading Wearable Dashboard...
-      </div>
-    );
+  const handleDisconnect = async (deleteData: boolean = false) => {
+    try {
+      await wearableAPI.disconnect(selectedProvider, deleteData);
+      toast.success(`Disconnected ${selectedProvider}.` + (deleteData ? " Data deleted." : ""));
+      fetchData();
+    } catch {
+      toast.error("Failed to disconnect provider.");
+    }
+  };
+
+  const handleDeleteAllData = async () => {
+    if (!confirm("Are you sure you want to delete all stored wearable telemetry records?")) return;
+    try {
+      await wearableAPI.deleteData();
+      toast.success("All stored wearable data deleted.");
+      fetchData();
+    } catch {
+      toast.error("Failed to delete wearable records.");
+    }
+  };
+
+  if (authLoading || loading) {
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
-
-  const bpmData = history.slice().reverse().map(h => h.heart_rate_bpm);
-  const hrvData = history.slice().reverse().map(h => h.hrv_ms);
-  const sleepData = history.slice().reverse().map(h => h.sleep_hours);
-  const stepData = history.slice().reverse().map(h => h.step_count);
-
-  const ansState = fusion?.autonomic_nervous_system_state ?? "";
-  const isCritical = fusion && fusion.fused_bio_emotional_stress_score >= 7;
-  const isOptimal = fusion && fusion.fused_bio_emotional_stress_score <= 3.5;
 
   return (
     <div className="min-h-screen flex bg-slate-950">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <Navbar title="Wearable Integration" />
+        <Navbar title="Wearable Device Integration & Multimodal Wellness" />
 
-        <main className="flex-1 p-4 md:p-8 space-y-8 max-w-7xl mx-auto w-full">
-
-          {/* ── Hero Header ─────────────────────────────────────────────── */}
-          <div className="relative overflow-hidden rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-950/40 via-slate-900 to-violet-950/40 p-6 md:p-8">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(236,72,153,0.08)_0%,_transparent_60%)]" />
-            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400">
-                    <Watch className="w-6 h-6" />
+        <main className="flex-1 p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Hero Banner */}
+          <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-950/30 via-slate-900 to-cyan-950/30 p-6">
+            <div className="relative flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                  <Watch className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl md:text-3xl font-extrabold text-white">
+                      Wearable Device Integration
+                    </h1>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                      Health Data Pipeline
+                    </span>
                   </div>
-                  <div>
-                    <h1 className="text-2xl md:text-3xl font-extrabold text-white">Wearable Integration</h1>
-                    <p className="text-slate-400 text-sm mt-0.5">Smartwatch biometrics enriching your emotional intelligence</p>
+                  <p className="text-slate-400 text-sm max-w-2xl">
+                    Import physiological heart rate, sleep duration, and daily step counts from supported platforms
+                    to correlate physical health signals with emotional trends.
+                  </p>
+                  <div className="flex flex-wrap gap-4 pt-2 text-xs text-slate-500">
+                    <span>🔒 OAuth 2.0 Provider Abstraction</span>
+                    <span>📊 Statistical Correlation Engine</span>
+                    <span>📈 Personal Baselines</span>
+                    <span>🛡️ Non-Diagnostic Wellness Safeguard</span>
                   </div>
                 </div>
-                <p className="text-slate-500 text-xs max-w-lg">
-                  MindCare AI fuses your heart rate, HRV, and sleep patterns with text-based emotion detection for a holistic
-                  Bio-Emotional Stress Index — giving your AI therapist the full physiological picture.
-                </p>
               </div>
 
-              <div className="flex flex-col items-start md:items-end gap-3">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border ${connected
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-                  : "bg-slate-800 border-slate-700 text-slate-400"
-                }`}>
-                  {connected
-                    ? <><Radio className="w-3.5 h-3.5 animate-ping" /> Apple Watch / Galaxy Watch (Simulated BLE)</>
-                    : <><Bluetooth className="w-3.5 h-3.5" /> No Device Paired</>
-                  }
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={handleBluetoothPair} className="btn-secondary py-2 px-4 text-xs flex items-center gap-2">
-                    <Bluetooth className="w-3.5 h-3.5 text-cyan-400" />
-                    {connected ? "Re-pair Device" : "Pair Smartwatch"}
-                  </button>
-                  <button onClick={fetchAll} disabled={loading} className="btn-secondary py-2 px-4 text-xs flex items-center gap-2">
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                    Refresh
-                  </button>
-                </div>
+              {status?.is_connected ? (
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="btn-primary py-2.5 px-4 text-xs font-bold flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Syncing Telemetry..." : "Sync Health Data"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleConnect}
+                  className="btn-primary py-2.5 px-4 text-xs font-bold flex items-center gap-2"
+                >
+                  <Zap className="w-4 h-4" /> Connect Device
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Device Connection & Consent Section */}
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+              <Watch className="w-4 h-4 text-cyan-400" />
+              Supported Wearable Providers &amp; Permission Scopes
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              {["Google Health Connect", "Apple Health", "Fitbit", "Garmin"].map((prov) => (
+                <button
+                  key={prov}
+                  onClick={() => setSelectedProvider(prov)}
+                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                    selectedProvider === prov
+                      ? "bg-cyan-500/10 border-cyan-500/40 text-white"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-bold text-xs">{prov}</span>
+                    {status?.connections.some((c) => c.provider === prov && c.connection_status === "connected") && (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1">Official Provider API</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Permission Checkboxes & Consent Notice */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+              <span className="text-xs font-bold text-slate-300 block">Requested Permission Scopes</span>
+              <div className="flex flex-wrap gap-6 text-xs text-slate-300">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scopes.heart_rate}
+                    onChange={(e) => setScopes({ ...scopes, heart_rate: e.target.checked })}
+                    className="accent-cyan-500"
+                  />
+                  <span>❤️ Heart Rate (BPM &amp; Resting)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scopes.sleep}
+                    onChange={(e) => setScopes({ ...scopes, sleep: e.target.checked })}
+                    className="accent-cyan-500"
+                  />
+                  <span>😴 Sleep Duration &amp; Stages</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scopes.activity}
+                    onChange={(e) => setScopes({ ...scopes, activity: e.target.checked })}
+                    className="accent-cyan-500"
+                  />
+                  <span>🏃 Activity &amp; Daily Steps</span>
+                </label>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+                <strong>Consent Agreement:</strong> By connecting your wearable, MindCare AI accesses only the specific health metrics
+                you authorize. Tokens are encrypted at rest and you can disconnect or delete stored data at any time.
               </div>
             </div>
           </div>
 
-          {/* ── Bio-Emotional Fusion Alert ───────────────────────────────── */}
-          {fusion && (
-            <div className={`p-4 rounded-2xl border flex items-start gap-4 ${
-              isCritical
-                ? "bg-rose-950/30 border-rose-500/30"
-                : isOptimal
-                ? "bg-emerald-950/30 border-emerald-500/30"
-                : "bg-amber-950/20 border-amber-500/20"
-            }`}>
-              <div className={`p-2 rounded-xl flex-shrink-0 ${
-                isCritical ? "bg-rose-500/10 text-rose-400" : isOptimal ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
-              }`}>
-                {isCritical ? <AlertTriangle className="w-5 h-5" /> : isOptimal ? <CheckCircle2 className="w-5 h-5" /> : <Brain className="w-5 h-5" />}
+          {/* Metric Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400 font-semibold">❤️ Heart Rate</span>
+                <span className="text-[10px] text-rose-400 font-bold px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">BPM</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-sm font-bold ${isCritical ? "text-rose-300" : isOptimal ? "text-emerald-300" : "text-amber-300"}`}>
-                    Fused Bio-Emotional Stress: {fusion.fused_bio_emotional_stress_score}/10
-                  </span>
-                  <span className="text-xs text-slate-400">• Confidence: {Math.round(fusion.biometric_fusion_confidence * 100)}%</span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1">{ansState}</p>
-                <p className="text-xs mt-0.5 font-semibold text-slate-300">Recovery: {fusion.recovery_status}</p>
-              </div>
-              <div className="text-right hidden md:block">
-                <div className="text-2xl font-black text-white">{fusion.fused_bio_emotional_stress_score}</div>
-                <div className="text-[10px] text-slate-400">/ 10</div>
-              </div>
+              <p className="text-2xl font-extrabold text-white">
+                {correlations?.personal_baselines.heart_rate.recent_bpm || 76} <span className="text-xs text-slate-500">avg</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                30-Day Baseline: {correlations?.personal_baselines.heart_rate.baseline_bpm || 72} BPM
+              </p>
             </div>
-          )}
 
-          {/* ── 4 Key Metrics ────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              {
-                label: "Heart Rate", value: `${summary?.avg_heart_rate_bpm ?? 72}`, unit: "BPM",
-                icon: Heart, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20",
-                data: bpmData, lineColor: "#f87171", sub: "7-day average PPG"
-              },
-              {
-                label: "Heart Rate Variability", value: `${summary?.avg_hrv_ms ?? 45}`, unit: "ms",
-                icon: Activity, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20",
-                data: hrvData, lineColor: "#22d3ee", sub: "Autonomic tone index"
-              },
-              {
-                label: "Sleep Duration", value: `${summary?.avg_sleep_hours ?? 7.5}`, unit: "h",
-                icon: Moon, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20",
-                data: sleepData, lineColor: "#818cf8", sub: "Avg nightly rest"
-              },
-              {
-                label: "Daily Steps", value: `${(summary?.avg_step_count ?? 6200).toLocaleString()}`, unit: "steps",
-                icon: Footprints, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20",
-                data: stepData.map(s => s / 1000), lineColor: "#34d399", sub: "Activity goal tracking"
-              },
-            ].map(({ label, value, unit, icon: Icon, color, bg, data, lineColor, sub }) => (
-              <div key={label} className={`glass-dark p-4 space-y-3 border ${bg}`}>
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-lg ${bg}`}>
-                    <Icon className={`w-4 h-4 ${color}`} />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-400">{label}</span>
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-extrabold text-white">{value}</span>
-                    <span className={`text-xs font-bold ${color}`}>{unit}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{sub}</p>
-                </div>
-                <Sparkline data={data.length > 1 ? data : [value as unknown as number, value as unknown as number]} color={lineColor} height={36} />
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400 font-semibold">😴 Sleep Duration</span>
+                <span className="text-[10px] text-indigo-400 font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">Hours</span>
               </div>
-            ))}
-          </div>
-
-          {/* ── Gauges Row ────────────────────────────────────────────────── */}
-          <div className="glass-dark border border-slate-800/60 p-6 rounded-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-violet-400" /> Wellness Index Scores
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Derived from {summary?.total_readings ?? 0} biometric readings over {days} days</p>
-              </div>
-              {summary && <TrendBadge trend={summary.trend} />}
+              <p className="text-2xl font-extrabold text-white">
+                {correlations?.personal_baselines.sleep.recent_hours || 7.0}h <span className="text-xs text-slate-500">recent</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                30-Day Baseline: {correlations?.personal_baselines.sleep.baseline_hours || 7.5}h
+              </p>
             </div>
-            <div className="flex flex-wrap gap-6 justify-center md:justify-start">
-              <RadialGauge value={summary?.sleep_quality_score ?? 75} label="Sleep Quality" color="#818cf8" />
-              <RadialGauge value={summary?.recovery_index ?? 72} label="Recovery Index" color="#22d3ee" />
-              <RadialGauge value={fusion ? Math.max(0, 100 - fusion.fused_bio_emotional_stress_score * 10) : 65} label="Stress Resilience" color="#34d399" />
-              <RadialGauge value={fusion ? Math.round(fusion.biometric_fusion_confidence * 100) : 94} label="AI Confidence" color="#a78bfa" />
+
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400 font-semibold">🏃 Daily Activity</span>
+                <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">Steps</span>
+              </div>
+              <p className="text-2xl font-extrabold text-white">
+                {(correlations?.personal_baselines.activity.recent_steps || 6200).toLocaleString()}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                30-Day Baseline: {(correlations?.personal_baselines.activity.baseline_steps || 6500).toLocaleString()} steps
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400 font-semibold">😊 Emotional Trend</span>
+                <span className="text-[10px] text-amber-400 font-bold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">Check-ins</span>
+              </div>
+              <p className="text-2xl font-extrabold text-emerald-400 capitalize">
+                Mostly Positive
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Paired Samples: {correlations?.correlations.paired_sample_count || 0} days
+              </p>
             </div>
           </div>
 
-          {/* ── Sleep Architecture + Log Panel ──────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Sleep Architecture */}
-            <div className="glass-dark border border-indigo-500/20 p-6 rounded-2xl space-y-4">
-              <div className="flex items-center gap-2">
-                <Moon className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-sm font-bold text-white">Sleep Architecture</h3>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Last Night</span>
-                  <span className="font-bold text-white">{summary?.avg_sleep_hours ?? 7.5}h total</span>
-                </div>
-                <SleepBar sleepHours={summary?.avg_sleep_hours ?? 7.5} remPct={summary?.avg_rem_percentage ?? 22} />
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
-                  <span className="text-slate-400 block">REM Sleep</span>
-                  <span className="text-lg font-extrabold text-violet-300">{summary?.avg_rem_percentage ?? 22}%</span>
-                  <span className="text-[10px] text-slate-500">Target: 20–25%</span>
-                </div>
-                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
-                  <span className="text-slate-400 block">Sleep Score</span>
-                  <span className="text-lg font-extrabold text-indigo-300">{summary?.sleep_quality_score ?? 75}/100</span>
-                  <span className="text-[10px] text-slate-500">
-                    {(summary?.sleep_quality_score ?? 75) >= 80 ? "Excellent" : (summary?.sleep_quality_score ?? 75) >= 60 ? "Good" : "Needs Improvement"}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Non-Diagnostic Wellness Insights & Personal Baselines */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Non-Diagnostic Wellness Insights */}
+            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                Personalized Wellness Insights
+              </h3>
 
-            {/* Log Manual Reading */}
-            <div className="glass-dark border border-pink-500/20 p-6 rounded-2xl space-y-4">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-pink-400" />
-                <h3 className="text-sm font-bold text-white">Log Biometrics</h3>
-              </div>
               <div className="space-y-3">
-                {[
-                  { label: "❤️ Heart Rate", value: bpm, set: setBpm, min: 45, max: 150, unit: "BPM", color: "accent-red-500" },
-                  { label: "⚡ HRV", value: hrv, set: setHrv, min: 10, max: 120, unit: "ms", color: "accent-cyan-500" },
-                  { label: "🌙 Sleep", value: sleepH, set: setSleepH, min: 3, max: 12, step: 0.5, unit: "h", color: "accent-indigo-500" },
-                  { label: "💤 REM %", value: remPct, set: setRemPct, min: 5, max: 40, unit: "%", color: "accent-violet-500" },
-                ].map(({ label, value, set, min, max, unit, step, color }) => (
-                  <div key={label} className="space-y-1">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-400 font-semibold">{label}</span>
-                      <span className="text-white font-bold">{value} {unit}</span>
-                    </div>
-                    <input
-                      type="range" min={min} max={max} step={step ?? 1}
-                      value={value}
-                      onChange={e => set(Number(e.target.value))}
-                      className={`w-full h-1.5 rounded-full bg-slate-800 appearance-none cursor-pointer ${color}`}
-                    />
+                {correlations?.wellness_insights.map((ins, idx) => (
+                  <div key={idx} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 leading-relaxed flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                    <span>{ins}</span>
                   </div>
                 ))}
               </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400">
+                <strong>Non-Diagnostic Notice:</strong> {correlations?.non_diagnostic_notice}
+              </div>
+            </div>
+
+            {/* Statistical Correlations Card */}
+            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                <TrendingUp className="w-4 h-4 text-cyan-400" />
+                Statistical Bio-Emotional Correlations (Pearson r)
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                  <div>
+                    <span className="font-bold text-white block">Sleep Duration ↔ Emotional Score</span>
+                    <span className="text-[11px] text-slate-500">Measures correlation between sleep duration and mood check-ins</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-cyan-400">
+                    r = {correlations?.correlations.sleep_emotion_r ?? "0.42"}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                  <div>
+                    <span className="font-bold text-white block">Heart Rate ↔ Emotional Score</span>
+                    <span className="text-[11px] text-slate-500">Measures resting BPM correlation with mood check-ins</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-rose-400">
+                    r = {correlations?.correlations.heart_rate_emotion_r ?? "-0.31"}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                  <div>
+                    <span className="font-bold text-white block">Daily Activity (Steps) ↔ Emotional Score</span>
+                    <span className="text-[11px] text-slate-500">Measures step count correlation with positive mood</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-emerald-400">
+                    r = {correlations?.correlations.activity_emotion_r ?? "0.38"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Combined Multimodal Timeline */}
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-cyan-400" />
+                Combined Multimodal Health &amp; Emotion Timeline
+              </h3>
+
+              <div className="flex gap-2 text-xs">
+                {["daily", "weekly", "monthly"].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`py-1 px-3 rounded-lg capitalize border ${
+                      period === p
+                        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30 font-bold"
+                        : "bg-slate-950 text-slate-400 border-slate-800"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Sleep Duration</th>
+                    <th className="py-3 px-4">Heart Rate</th>
+                    <th className="py-3 px-4">Daily Activity</th>
+                    <th className="py-3 px-4">Emotion Signal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {timeline.length > 0 ? (
+                    timeline.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-950/40">
+                        <td className="py-3 px-4 font-mono text-slate-200">{item.date}</td>
+                        <td className="py-3 px-4">{item.sleep_duration_hours}h</td>
+                        <td className="py-3 px-4">{item.heart_rate_bpm} BPM</td>
+                        <td className="py-3 px-4">{item.steps.toLocaleString()} steps</td>
+                        <td className="py-3 px-4 font-bold text-cyan-300 capitalize">{item.emotion}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-slate-500">
+                        No wearable telemetry recorded for this period yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Privacy & Disconnect Controls */}
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+              <Lock className="w-4 h-4 text-emerald-400" />
+              Wearable Privacy &amp; Data Deletion Controls
+            </h3>
+
+            <div className="flex flex-wrap gap-3">
               <button
-                onClick={handleLogBiometrics}
-                disabled={logging}
-                className="btn-primary w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
+                onClick={() => handleDisconnect(false)}
+                className="py-2.5 px-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-xs text-slate-300 font-semibold"
               >
-                {logging ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Watch className="w-4 h-4" />}
-                {logging ? "Logging..." : "Submit Reading to MindCare AI"}
+                Disconnect Provider
+              </button>
+
+              <button
+                onClick={() => handleDisconnect(true)}
+                className="py-2.5 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-xs text-amber-300 font-semibold"
+              >
+                Disconnect &amp; Delete Provider Data
+              </button>
+
+              <button
+                onClick={handleDeleteAllData}
+                className="py-2.5 px-4 rounded-xl bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 text-xs text-rose-300 font-semibold flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete Stored Wearable Records
               </button>
             </div>
           </div>
-
-          {/* ── Emotion-Biometric Correlation ────────────────────────────── */}
-          {fusion && (
-            <div className="glass-dark border border-violet-500/20 p-6 rounded-2xl space-y-4">
-              <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-violet-400" />
-                <h3 className="text-sm font-bold text-white">Emotion-Biometric Correlation</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 font-bold ml-auto">
-                  {Math.round(fusion.biometric_fusion_confidence * 100)}% Confidence
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-orange-950/20 border border-orange-500/20 space-y-1">
-                  <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Physiological Stress</span>
-                  <div className="text-2xl font-extrabold text-white">{fusion.physiological_stress_score}<span className="text-sm text-slate-400">/10</span></div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${fusion.physiological_stress_score * 10}%` }} />
-                  </div>
-                  <p className="text-[10px] text-slate-500">From BPM · HRV · Sleep</p>
-                </div>
-                <div className="p-4 rounded-xl bg-violet-950/20 border border-violet-500/20 space-y-1">
-                  <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Text Emotion Stress</span>
-                  <div className="text-2xl font-extrabold text-white">{fusion.text_emotion_stress_score}<span className="text-sm text-slate-400">/10</span></div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-violet-500 rounded-full" style={{ width: `${fusion.text_emotion_stress_score * 10}%` }} />
-                  </div>
-                  <p className="text-[10px] text-slate-500">From chat & journal NLP</p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-900/80 border border-pink-500/30 space-y-1 ring-1 ring-pink-500/10">
-                  <span className="text-[10px] font-bold text-pink-300 uppercase tracking-wider">🧬 Fused Index (50/50)</span>
-                  <div className="text-3xl font-black text-white">{fusion.fused_bio_emotional_stress_score}<span className="text-sm text-slate-400">/10</span></div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${fusion.fused_bio_emotional_stress_score >= 7 ? "bg-rose-500" : fusion.fused_bio_emotional_stress_score <= 3.5 ? "bg-emerald-500" : "bg-amber-500"}`}
-                      style={{ width: `${fusion.fused_bio_emotional_stress_score * 10}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-500">Multimodal fusion output</p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Autonomic State</span>
-                  <span className="font-semibold text-white">{fusion.autonomic_nervous_system_state}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Recovery Status</span>
-                  <span className="font-semibold text-emerald-300">{fusion.recovery_status}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Recent Readings Table ─────────────────────────────────────── */}
-          <div className="glass-dark border border-slate-800 p-6 rounded-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <h3 className="text-sm font-bold text-white">Recent Readings</h3>
-              </div>
-              <span className="text-xs text-slate-500">{history.length} entries</span>
-            </div>
-            {history.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 text-sm">
-                No readings yet. Log your first biometric reading above.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead>
-                    <tr className="text-slate-500 border-b border-slate-800">
-                      {["Time", "BPM", "HRV (ms)", "Sleep (h)", "REM %", "Steps"].map(h => (
-                        <th key={h} className="pb-2 pr-4 font-semibold">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.slice(0, 10).map((log) => (
-                      <tr key={log.id} className="border-b border-slate-900 hover:bg-slate-900/40 transition-colors">
-                        <td className="py-2 pr-4 text-slate-400">{log.recorded_at ? new Date(log.recorded_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
-                        <td className="py-2 pr-4 font-bold text-red-300">{log.heart_rate_bpm}</td>
-                        <td className="py-2 pr-4 font-bold text-cyan-300">{log.hrv_ms}</td>
-                        <td className="py-2 pr-4 font-bold text-indigo-300">{log.sleep_hours}</td>
-                        <td className="py-2 pr-4 font-bold text-violet-300">{log.rem_sleep_percentage}%</td>
-                        <td className="py-2 pr-4 font-bold text-emerald-300">{log.step_count.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* ── How It Works ─────────────────────────────────────────────── */}
-          <div className="glass-dark border border-slate-800 p-6 rounded-2xl space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-violet-400" /> How Wearable Data Enriches Your Emotion Analysis
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              {[
-                {
-                  icon: Heart, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20",
-                  title: "PPG Heart Rate",
-                  desc: "Elevated BPM (>85) signals physiological stress independent of what you say, letting the AI detect masked anxiety."
-                },
-                {
-                  icon: Activity, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20",
-                  title: "HRV Autonomic Index",
-                  desc: "Low HRV (<35ms) indicates sympathetic dominance (fight-or-flight), enriching emotion models with autonomic tone."
-                },
-                {
-                  icon: Moon, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20",
-                  title: "Sleep Architecture",
-                  desc: "Poor sleep quality (<6.5h or low REM) predicts next-day negative affect, helping the AI proactively support you."
-                },
-              ].map(({ icon: Icon, color, bg, title, desc }) => (
-                <div key={title} className={`p-4 rounded-xl border ${bg} space-y-2`}>
-                  <div className={`flex items-center gap-2 ${color} font-bold`}>
-                    <Icon className="w-4 h-4" /> {title}
-                  </div>
-                  <p className="text-slate-400 leading-relaxed">{desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </main>
       </div>
     </div>

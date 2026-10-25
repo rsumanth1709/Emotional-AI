@@ -13,6 +13,7 @@ import {
   TrendingUp, Calendar, RefreshCw, Zap, Award, CheckCircle2,
   ChevronRight, Layers, ShieldCheck, Activity, Flame, Trash2
 } from "lucide-react";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 export default function GoalsPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -126,12 +127,7 @@ export default function GoalsPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-violet-400 mr-3" />
-        Loading AI Goal Planner…
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   const activeGoal = goals.find((g) => g.status === "active") || goals[0];

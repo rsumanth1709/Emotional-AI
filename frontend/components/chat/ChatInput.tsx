@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Smile, Mic, MicOff, X, Search } from "lucide-react";
+import Link from "next/link";
+import { Send, Smile, Mic, MicOff, X, Search, Plus, Camera, Video, Sparkles, Image as ImageIcon, FileText, Paperclip } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ── Emoji with Names ──────────────────────────────────────────────────────
@@ -908,12 +909,37 @@ declare global {
 export default function ChatInput({
   onSend,
   disabled,
+  onWebcamClick,
+  onFileUploadClick,
+  onSampleFaceClick,
+  onVoiceRecordClick,
+  imagePreview,
+  attachedFileName,
+  audioUrl,
+  isRecording,
+  onRemoveImage,
+  onRemoveFile,
+  onRemoveAudio,
+  onStopRecording,
 }: {
   onSend: (text: string) => void;
   disabled: boolean;
+  onWebcamClick?: () => void;
+  onFileUploadClick?: () => void;
+  onSampleFaceClick?: () => void;
+  onVoiceRecordClick?: () => void;
+  imagePreview?: string | null;
+  attachedFileName?: string | null;
+  audioUrl?: string | null;
+  isRecording?: boolean;
+  onRemoveImage?: () => void;
+  onRemoveFile?: () => void;
+  onRemoveAudio?: () => void;
+  onStopRecording?: () => void;
 }) {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [activeCategory, setActiveCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -923,8 +949,19 @@ export default function ChatInput({
 
   const recognitionRef = useRef<any>(null);
   const emojiPanelRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const plusMenuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
+        setShowPlusMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Flatten all items for search
   const allItems = EMOJI_CATEGORIES.flatMap((c) => c.items);
@@ -973,11 +1010,28 @@ export default function ChatInput({
     if (showEmoji) setTimeout(() => searchRef.current?.focus(), 100);
   }, [showEmoji]);
 
+  const adjustHeight = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+      const nextHeight = Math.min(inputRef.current.scrollHeight, 240); // ~10 lines max height
+      inputRef.current.style.height = `${nextHeight}px`;
+    }
+  }, []);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [text, adjustHeight]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const final = text.trim();
     if (!final || disabled) return;
-    onSend(final); setText(""); setInterimText(""); setShowEmoji(false);
+    onSend(final);
+    setText("");
+    setInterimText("");
+    setShowEmoji(false);
+    setShowPlusMenu(false);
+    if (inputRef.current) inputRef.current.style.height = "auto";
   };
 
   const handleEmojiClick = (emoji: string) => {
@@ -1114,56 +1168,253 @@ export default function ChatInput({
         )}
       </AnimatePresence>
 
-      {/* Input Bar */}
-      <form onSubmit={handleSubmit} className="flex gap-2 p-4 bg-slate-900 border-t border-white/5 items-center">
-        <button
-          type="button"
-          onClick={() => { setShowEmoji((p) => !p); setSearchQuery(""); }}
-          className={`p-2.5 rounded-xl border transition-all flex-shrink-0 ${
-            showEmoji ? "bg-violet-500/20 border-violet-500/40 text-violet-400" : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white"
-          }`}
-          aria-label="Toggle Emoji Picker"
-        >
-          <Smile className="w-5 h-5" />
-        </button>
-
-        <input
-          ref={inputRef}
-          type="text"
-          value={isListening && interimText ? text + interimText : text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleSubmit(e as any); }}
-          placeholder={isListening ? "Listening..." : "Type a message... Express how you feel."}
-          disabled={disabled}
-          className={`flex-1 bg-white/5 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 disabled:opacity-50 text-white placeholder-slate-500 transition-all ${
-            isListening ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/20 bg-red-500/5" : "border-white/10 focus:border-violet-500 focus:ring-violet-500"
-          }`}
-        />
-
-        {voiceSupported ? (
-          <button
-            type="button" onClick={toggleVoice}
-            className={`p-2.5 rounded-xl border transition-all flex-shrink-0 ${
-              isListening ? "bg-red-500/20 border-red-500/40 text-red-400 animate-pulse" : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white"
-            }`}
-            aria-label={isListening ? "Stop Voice Input" : "Start Voice Input"}
-            title={isListening ? "Click to stop" : "Click to speak"}
+      {/* Plus Action Options Popover */}
+      <AnimatePresence>
+        {showPlusMenu && (
+          <motion.div
+            ref={plusMenuRef}
+            className="absolute bottom-full mb-3 left-4 bg-slate-900 border border-slate-800 rounded-3xl p-3 shadow-2xl z-50 w-72 backdrop-blur-xl space-y-1.5"
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
           >
-            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </button>
-        ) : (
-          <button type="button" disabled className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-600 cursor-not-allowed flex-shrink-0" title="Voice input not supported">
-            <Mic className="w-5 h-5" />
-          </button>
+            <div className="text-[10px] font-extrabold text-purple-400 uppercase px-2 py-1 tracking-wider flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
+              <Sparkles className="w-3.5 h-3.5" /> MindCare Quick Actions
+            </div>
+
+            {/* Section 1: Multimodal Attachments */}
+            <div className="pt-1">
+              <span className="text-[9px] font-bold text-slate-500 uppercase px-2 tracking-wider block mb-1">
+                Attach Media & Documents
+              </span>
+
+              {onFileUploadClick && (
+                <button
+                  type="button"
+                  onClick={() => { setShowPlusMenu(false); onFileUploadClick(); }}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all text-left group"
+                >
+                  <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block font-bold text-white">Upload File</span>
+                    <span className="block text-[10px] text-slate-500">PDF, Word, spreadsheet, code, or photo</span>
+                  </div>
+                </button>
+              )}
+
+              {onWebcamClick && (
+                <button
+                  type="button"
+                  onClick={() => { setShowPlusMenu(false); onWebcamClick(); }}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all text-left group"
+                >
+                  <div className="p-1.5 rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block font-bold text-white">Camera Snapshot</span>
+                    <span className="block text-[10px] text-slate-500">Capture face for real-time emotion reading</span>
+                  </div>
+                </button>
+              )}
+
+              {onVoiceRecordClick && (
+                <button
+                  type="button"
+                  onClick={() => { setShowPlusMenu(false); onVoiceRecordClick(); }}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all text-left group"
+                >
+                  <div className="p-1.5 rounded-xl bg-rose-500/10 text-rose-400 group-hover:scale-110 transition-transform">
+                    <Mic className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block font-bold text-white">Voice Note</span>
+                    <span className="block text-[10px] text-slate-500">Record acoustic voice check-in</span>
+                  </div>
+                </button>
+              )}
+            </div>
+
+            {/* Section 2: Emotion AI Dedicated Suites */}
+            <div className="pt-1.5 border-t border-slate-800/80">
+              <span className="text-[9px] font-bold text-purple-400 uppercase px-2 tracking-wider block mb-1">
+                Emotion AI Suites
+              </span>
+
+              {/* Facial Emotion AI */}
+              <Link
+                href="/facial-emotion"
+                onClick={() => setShowPlusMenu(false)}
+                className="w-full flex items-center gap-2.5 p-2 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all text-left group"
+              >
+                <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="block font-bold text-white">Facial Emotion</span>
+                  <span className="block text-[10px] text-slate-500">Real-time facial micro-expression detector</span>
+                </div>
+              </Link>
+
+              {/* Video Emotion AI */}
+              <Link
+                href="/video-emotion"
+                onClick={() => setShowPlusMenu(false)}
+                className="w-full flex items-center gap-2.5 p-2 rounded-2xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all text-left group"
+              >
+                <div className="p-1.5 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:scale-110 transition-transform">
+                  <Video className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="block font-bold text-white">Video Emotion</span>
+                  <span className="block text-[10px] text-slate-500">Per-sentence & holistic video analysis</span>
+                </div>
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input Bar */}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 p-2.5 md:p-3 rounded-3xl bg-slate-900/90 border border-slate-800/90 shadow-2xl backdrop-blur-2xl focus-within:border-purple-500/60 focus-within:shadow-[0_0_30px_rgba(168,85,247,0.18)] transition-all">
+        {/* Embedded Multimodal Attachment Chips (Inside Searchbar) */}
+        {(imagePreview || audioUrl || isRecording || attachedFileName) && (
+          <div className="flex items-center gap-2 px-2 pt-1 pb-2 border-b border-slate-800/80 flex-wrap">
+            {attachedFileName && (
+              <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-2xl border border-blue-500/30 shadow-sm animate-fade-in">
+                <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                <span className="text-xs font-bold text-blue-200 truncate max-w-[200px]">{attachedFileName}</span>
+                {onRemoveFile && (
+                  <button type="button" onClick={onRemoveFile} className="text-slate-400 hover:text-white text-xs font-bold ml-1 p-0.5 rounded hover:bg-white/10 transition-colors">
+                    &times;
+                  </button>
+                )}
+              </div>
+            )}
+
+            {imagePreview && !attachedFileName && (
+              <div className="flex items-center gap-2 bg-slate-950 px-2.5 py-1.5 rounded-2xl border border-purple-500/30 shadow-sm animate-fade-in">
+                <img src={imagePreview} className="w-8 h-7 rounded-lg object-cover border border-purple-500/40" alt="Facial snapshot" />
+                <span className="text-xs font-bold text-purple-300">Facial Snapshot Attached</span>
+                {onRemoveImage && (
+                  <button type="button" onClick={onRemoveImage} className="text-slate-400 hover:text-white text-xs font-bold ml-1 p-0.5 rounded hover:bg-white/10 transition-colors">
+                    &times;
+                  </button>
+                )}
+              </div>
+            )}
+
+            {audioUrl && (
+              <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-2xl border border-rose-500/30 shadow-sm animate-fade-in">
+                <audio src={audioUrl} controls className="h-6 w-36" />
+                <span className="text-xs font-bold text-rose-300">Voice Note</span>
+                {onRemoveAudio && (
+                  <button type="button" onClick={onRemoveAudio} className="text-slate-400 hover:text-white text-xs font-bold ml-1 p-0.5 rounded hover:bg-white/10 transition-colors">
+                    &times;
+                  </button>
+                )}
+              </div>
+            )}
+
+            {isRecording && (
+              <div className="flex items-center gap-2 text-rose-300 text-xs font-bold animate-pulse bg-rose-500/15 px-3 py-1.5 rounded-2xl border border-rose-500/30 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-rose-500 block animate-ping" />
+                <span>Recording voice note...</span>
+                {onStopRecording && (
+                  <button type="button" onClick={onStopRecording} className="ml-1 text-xs text-rose-200 hover:text-white font-extrabold underline transition-colors">
+                    Done
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
-        <button
-          type="submit" disabled={!text.trim() || disabled}
-          className="btn-primary p-3 flex items-center justify-center rounded-xl flex-shrink-0"
-          aria-label="Send Message"
-        >
-          <Send className="w-4 h-4" />
-        </button>
+        <div className="flex gap-2 items-center w-full">
+          {/* Plus Action Button (Left) */}
+          <button
+            type="button"
+            onClick={() => { setShowPlusMenu((p) => !p); setShowEmoji(false); }}
+            className={`p-2.5 rounded-full border transition-all flex-shrink-0 ${
+              showPlusMenu
+                ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-500/30 rotate-45 scale-105"
+                : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white"
+            }`}
+            aria-label="Toggle Attachments & Options"
+            title="Add attachments & quick tools"
+          >
+            <Plus className="w-5 h-5 transition-transform duration-200" />
+          </button>
+
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={isListening && interimText ? text + interimText : text}
+            onChange={(e) => {
+              setText(e.target.value);
+              adjustHeight();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as any);
+              }
+            }}
+            placeholder={isListening ? "Listening... speak now" : "Message MindCare AI, ask a question, or share how you feel..."}
+            disabled={disabled}
+            className={`flex-1 bg-white/5 border rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 disabled:opacity-50 text-white placeholder-slate-500 transition-all resize-none overflow-y-auto max-h-[220px] min-h-[44px] scrollbar-thin scrollbar-thumb-slate-800 ${
+              isListening ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/20 bg-red-500/5" : "border-white/10 focus:border-purple-500/80 focus:ring-purple-500/30"
+            }`}
+          />
+
+          {/* Emoji Picker Button */}
+          <button
+            type="button"
+            onClick={() => { setShowEmoji((p) => !p); setShowPlusMenu(false); setSearchQuery(""); }}
+            className={`p-2.5 rounded-full border transition-all flex-shrink-0 ${
+              showEmoji ? "bg-purple-500/25 border-purple-500/40 text-purple-300" : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white"
+            }`}
+            aria-label="Toggle Emoji Picker"
+            title="Emoji expressions"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          {/* Voice Input Button */}
+          {voiceSupported ? (
+            <button
+              type="button" onClick={toggleVoice}
+              className={`p-2.5 rounded-full border transition-all flex-shrink-0 ${
+                isListening ? "bg-red-500/20 border-red-500/40 text-red-400 animate-pulse" : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white"
+              }`}
+              aria-label={isListening ? "Stop Voice Input" : "Start Voice Input"}
+              title={isListening ? "Click to stop listening" : "Voice dictation"}
+            >
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+          ) : (
+            <button type="button" disabled className="p-2.5 rounded-full bg-white/5 border border-white/10 text-slate-600 cursor-not-allowed flex-shrink-0" title="Voice input not supported">
+              <Mic className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Dynamic Send Button */}
+          <button
+            type="submit"
+            disabled={(!text.trim() && !imagePreview && !audioUrl && !attachedFileName) || disabled}
+            className={`p-2.5 rounded-2xl flex items-center justify-center transition-all flex-shrink-0 ${
+              (!text.trim() && !imagePreview && !audioUrl && !attachedFileName) || disabled
+                ? "bg-slate-800 border border-slate-700/50 text-slate-500 cursor-not-allowed"
+                : "bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-500 text-white shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95"
+            }`}
+            aria-label="Send Message"
+            title="Send"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
       </form>
     </div>
   );

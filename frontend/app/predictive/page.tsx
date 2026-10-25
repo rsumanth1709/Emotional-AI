@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import PredictiveForecastCard from "@/components/dashboard/PredictiveForecastCard";
 import { Cpu, Sparkles, Activity, ShieldCheck, RefreshCw } from "lucide-react";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 export default function PredictivePage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -19,12 +20,7 @@ export default function PredictivePage() {
   }, [user, authLoading, router]);
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-violet-400 mr-3" />
-        Loading PyTorch Predictive Engine...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

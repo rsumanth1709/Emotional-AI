@@ -13,6 +13,7 @@ import {
   Settings, Save, X, RefreshCw
 } from "lucide-react";
 import toast from "react-hot-toast";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 interface Goal {
   water_target_ml: number;
@@ -186,11 +187,7 @@ export default function WellnessCoachPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Aligning wellness targets...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   // Helper to draw circular gauges

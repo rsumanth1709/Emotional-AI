@@ -9,6 +9,8 @@ import Navbar from "@/components/layout/Navbar";
 import EmotionProfileCard from "@/components/research/EmotionProfileCard";
 import { Brain, RefreshCw, Sparkles, ShieldCheck } from "lucide-react";
 
+import MindCareLoading from "@/components/ui/MindCareLoading";
+
 export default function EmotionProfilePage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -20,12 +22,7 @@ export default function EmotionProfilePage() {
   }, [user, authLoading, router]);
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-violet-400 mr-3" />
-        Loading Emotion Profile Engine...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

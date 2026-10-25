@@ -55,6 +55,7 @@ export function useChat() {
         stress_score: res.data.emotion_result.stress_score,
         confidence: res.data.emotion_result.confidence,
         is_crisis: res.data.is_crisis,
+        intent: res.data.intent,
       };
 
       const botMsg: Message = {
@@ -62,6 +63,7 @@ export function useChat() {
         role: "assistant",
         content: res.data.response,
         persona: res.data.persona,
+        sources: res.data.sources,
         created_at: res.data.timestamp,
       };
 
@@ -88,14 +90,19 @@ export function useChat() {
   const sendMultimodalMessage = async (
     text: string,
     audioBlob: Blob | null,
-    imageBlob: Blob | null
+    imageBlob: Blob | null,
+    fileAttachment?: File | Blob | null,
+    fileName?: string,
   ) => {
     setIsLoading(true);
     const userMsgId = uuidv4();
     
     let displayContent = text;
     if (!text) {
-      if (audioBlob && imageBlob) {
+      if (fileAttachment) {
+        const name = fileName || (fileAttachment as File).name || "file";
+        displayContent = `[Attached file: ${name}]`;
+      } else if (audioBlob && imageBlob) {
         displayContent = "[Sent voice note & snapshot]";
       } else if (audioBlob) {
         displayContent = "[Sent voice note]";
@@ -106,10 +113,19 @@ export function useChat() {
       }
     }
 
+    const imageUrl = imageBlob ? URL.createObjectURL(imageBlob) : undefined;
+    const audioUrl = audioBlob ? URL.createObjectURL(audioBlob) : undefined;
+    const attachedFileName = fileName || (fileAttachment ? (fileAttachment as File).name : undefined);
+    const attachedFileUrl = (fileAttachment && !imageUrl) ? URL.createObjectURL(fileAttachment) : undefined;
+
     const tempUserMsg: Message = {
       id: userMsgId,
       role: "user",
       content: displayContent,
+      image_url: imageUrl,
+      audio_url: audioUrl,
+      file_name: attachedFileName,
+      file_url: attachedFileUrl,
       created_at: new Date().toISOString(),
     };
     
@@ -126,6 +142,10 @@ export function useChat() {
       if (imageBlob) {
         formData.append("image", imageBlob, "snapshot.jpg");
       }
+      if (fileAttachment) {
+        const resolvedName = attachedFileName || "uploaded_file";
+        formData.append("file", fileAttachment, resolvedName);
+      }
 
       const res = await chatAPI.sendMultimodalMessage(formData);
       
@@ -136,6 +156,7 @@ export function useChat() {
         stress_score: res.data.emotion_result.stress_score,
         confidence: res.data.emotion_result.confidence,
         is_crisis: res.data.is_crisis,
+        intent: res.data.intent,
       };
 
       const botMsg: Message = {
@@ -143,6 +164,7 @@ export function useChat() {
         role: "assistant",
         content: res.data.response,
         persona: res.data.persona,
+        sources: res.data.sources,
         created_at: res.data.timestamp,
       };
 

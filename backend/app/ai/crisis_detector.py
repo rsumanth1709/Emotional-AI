@@ -210,16 +210,22 @@ class CrisisDetector:
         if severity in ("critical", "high"):
             add_resources(EMERGENCY_RESOURCES)
 
-        logger.warning(
-            f"CRISIS DETECTED: severity={severity} type={primary_category} matched={keywords}"
-        )
+        is_crisis_alert = severity in ("critical", "high")
+        if is_crisis_alert:
+            logger.warning(
+                f"CRISIS DETECTED: severity={severity} type={primary_category} matched={keywords}"
+            )
+        else:
+            logger.debug(
+                f"Non-crisis emotional signal noted: severity={severity} type={primary_category} matched={keywords}"
+            )
 
         return {
-            "is_crisis": True,
+            "is_crisis": is_crisis_alert,
             "severity": severity,
             "risk_type": primary_category,
             "matched_keywords": keywords,
-            "crisis_resources": resources
+            "crisis_resources": resources if is_crisis_alert else []
         }
 
     def _safe_result(self) -> Dict:

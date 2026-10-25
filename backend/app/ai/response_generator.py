@@ -411,24 +411,98 @@ def _smart_fallback(text: str, emotion: str, target_lang: str = "en", conversati
     Return a contextual response based on keyword matching first,
     then fall back to emotion-specific responses.
     Respects target_lang to reply in the user's preferred language.
-    Uses conversation_history to understand short follow-up messages.
+    Uses conversation_history to understand short follow-up messages and duration answers.
+    Prevents repeating identical responses in the same session.
     """
-    text_lower = text.lower()
-    
-    # Augment text with history if the current message is very short (e.g. "suggest it")
-    if conversation_history and len(text_lower) < 20:
-        prev_user_msgs = [turn.get("content", "").lower() for turn in conversation_history if turn.get("role") == "user"]
-        if prev_user_msgs:
-            text_lower = prev_user_msgs[-1] + " " + text_lower
-            text = prev_user_msgs[-1] + " " + text
+    raw_text_lower = text.lower().strip()
+    text_lower = raw_text_lower
 
+    # ── Multimodal Facial Snapshot Direct Handler ──────────────────────────
+    if "facial snapshot" in raw_text_lower or "snapshot" in raw_text_lower:
+        snapshot_replies = {
+            "Happy": "I captured your facial snapshot! 😊 Your smile and positive expression are wonderful to see. What's been bringing you joy today?",
+            "Sad": "I captured your facial snapshot. 💙 Your expression looks a bit sad or heavy right now — I'm right here with you. Would you like to talk about what's weighing on you?",
+            "Stress": "I analyzed your facial snapshot. 🫂 Your face shows some signs of stress or tension. Take a slow, deep breath — what's causing the biggest strain right now?",
+            "Anxiety": "I captured your facial snapshot. 🌿 Your facial expression reflects some anxiety or worry. Remember you are safe in this moment. What's on your mind?",
+            "Angry": "I analyzed your facial snapshot. 😤 I can see some frustration in your expression. Take your time — what triggered this feeling?",
+            "Neutral": "I captured your facial snapshot! 📸 Your facial expression appears calm and balanced (Neutral). How are you feeling overall today?",
+        }
+        resp = snapshot_replies.get(emotion, snapshot_replies["Neutral"])
+        if resp not in prev_assistant_msgs:
+            return resp
 
-    # ── Song / music requests — always handled by multilingual song engine ──
+    # Collect previous assistant messages for deduplication
+    prev_assistant_msgs = []
+    prev_user_msgs = []
+    if conversation_history:
+        for turn in conversation_history:
+            if turn.get("role") == "assistant" and turn.get("content"):
+                prev_assistant_msgs.append(turn.get("content", ""))
+            elif turn.get("role") == "user" and turn.get("content"):
+                prev_user_msgs.append(turn.get("content", "").lower())
+
+    # ── Check for Duration / Time Frame Answers ───────────────────────────
+    # Detect answers like "past one month", "one week", "3 days", "since last week", etc.
+    import re
+    duration_match = re.search(
+        r'\b(past|for|about|since|last)?\s*(\d+|one|two|three|four|five|six|seven|eight|a|several)?\s*(day|days|week|weeks|month|months|year|years)\b',
+        raw_text_lower
+    )
+    last_assistant_text = prev_assistant_msgs[-1].lower() if prev_assistant_msgs else ""
+    asked_duration = any(kw in last_assistant_text for kw in ["how long", "when did", "since when", "how many"])
+
+    if duration_match or asked_duration or raw_text_lower in ["past one month", "one week", "one month", "1 week", "1 month"]:
+        is_month_plus = any(w in raw_text_lower for w in ["month", "months", "year", "years"])
+        is_sleep_context = any(w in (last_assistant_text + " " + " ".join(prev_user_msgs)) for w in ["sleep", "insomnia", "bed", "tired", "rest"])
+
+        if is_sleep_context:
+            if is_month_plus or "past one month" in raw_text_lower:
+                resp = (
+                    "I hear you — struggling with sleep for a full month takes a heavy toll on your daily energy, focus, and emotional health. 😴\n\n"
+                    "Since this has been ongoing for over a month, here are some science-backed steps to help reset your sleep pattern:\n"
+                    "• **Sleep Hygiene Reset**: Keep your room dark, quiet, and cool (65-68°F / 18-20°C). Avoid all screens 1 hour before bed.\n"
+                    "• **Stimulus Control**: Use your bed ONLY for sleep. If awake after 20 minutes, get up and do a low-light quiet activity.\n"
+                    "• **Progressive Muscle Relaxation**: Tense and release muscle groups from your toes to your face before sleep.\n"
+                    "• **Healthcare Check-in**: Persistent sleep trouble for >4 weeks is worth discussing with a doctor or sleep specialist.\n\n"
+                    "Would you like me to guide you through a 5-minute relaxation exercise right now?"
+                )
+            else:
+                resp = (
+                    "Thank you for letting me know. Dealing with poor sleep over the past week can leave you feeling exhausted, but addressing it early prevents it from becoming a long-term pattern. 🌿\n\n"
+                    "Since this started recently:\n"
+                    "• Did a specific recent event, work deadline, or stressor start around a week ago?\n"
+                    "• Try cutting out caffeine after 12:00 PM and practicing 4-7-8 breathing right before bed.\n\n"
+                    "Would you like to try a guided breathing exercise together right now, or discuss what started recently?"
+                )
+            if resp not in prev_assistant_msgs:
+                return resp
+
+        # Non-sleep general duration response
+        if is_month_plus:
+            resp = (
+                "Experiencing this for over a month can be deeply exhausting. 💙 Persistent feelings over several weeks deserve careful attention and self-compassion.\n\n"
+                "Have you noticed specific patterns or triggers over the past month that seem to make it harder or easier?\n\n"
+                "I'm here with you. What would feel most supportive right now?"
+            )
+        else:
+            resp = (
+                "Thank you for sharing that time frame. Dealing with this over the past week is tough, but catching it early gives us a great opportunity to find relief. 🌿\n\n"
+                "What has been the most challenging part of this past week for you?"
+            )
+        if resp not in prev_assistant_msgs:
+            return resp
+
+    # ── Augment text with history if short follow-up ─────────────────────
+    if conversation_history and len(text_lower) < 20 and prev_user_msgs:
+        text_lower = prev_user_msgs[-1] + " " + text_lower
+        text = prev_user_msgs[-1] + " " + text
+
+    # ── Song / music requests ────────────────────────────────────────────
     SONG_KWS = ["song", "music", "playlist", "listen", "paata", "paatalu", "gaana", "gana", "paadal"]
     if any(kw in text_lower for kw in SONG_KWS):
         return _get_songs(text, emotion, target_lang)
 
-    # ── Tenglish / Hinglish responses (driven by target_lang) ─────────────
+    # ── Tenglish / Hinglish responses ────────────────────────────────────
     if target_lang == "transliterated":
         hinglish_words = {"kya", "kar", "rahe", "ho", "aaj", "bohot", "mujhe", "hai", "thik", "yaar"}
         text_words = set(text_lower.split())
@@ -463,14 +537,36 @@ def _smart_fallback(text: str, emotion: str, target_lang: str = "en", conversati
             }
             return tenglish_replies.get(emotion, tenglish_replies["Neutral"])
 
-    # ── General keyword triggers ────────────────────────────────────────
+    # Clean out injected system notes like [Note to AI: ...] before keyword matching
+    import re
+    text_clean = re.sub(r'\[Note to AI:.*?\]', '', text, flags=re.IGNORECASE)
+    text_clean = re.sub(r'\[Sent.*?\]', '', text_clean, flags=re.IGNORECASE).strip().lower()
+
+    # ── General keyword triggers (with whole word matching & deduplication) ──
     for item in _KEYWORD_RESPONSES:
-        if any(kw in text_lower for kw in item["keywords"]):
-            return random.choice(item["responses"])
+        if any(re.search(r'\b' + re.escape(kw) + r'\b', text_clean) for kw in item["keywords"]):
+            for resp_candidate in item["responses"]:
+                if resp_candidate not in prev_assistant_msgs:
+                    return resp_candidate
+
+    # ── Ongoing Conversation Fallback (prevents repeating initial greetings) ──
+    if prev_assistant_msgs:
+        ongoing_options = [
+            "Thank you for sharing that with me. I'm listening closely. How is this impacting your daily routine, or what would feel most helpful for you right now?",
+            "I hear you, and I appreciate you opening up about this. Taking things one step at a time can help reduce the pressure. What's on your mind right now?",
+            "I'm right here with you. What is one small thing that might bring you some comfort or relief today?",
+        ]
+        for candidate in ongoing_options:
+            if candidate not in prev_assistant_msgs:
+                return candidate
 
     # ── Emotion-specific fallback ───────────────────────────────────────
     options = _EMOTION_FALLBACKS.get(emotion, _EMOTION_FALLBACKS["Neutral"])
-    return random.choice(options)
+    for candidate in options:
+        if candidate not in prev_assistant_msgs:
+            return candidate
+
+    return options[0]
 
 
 class ResponseGenerator:
@@ -484,7 +580,7 @@ class ResponseGenerator:
         self._initialized = False
 
     def _init_gemini(self):
-        """Lazy-initialize the Gemini client on first use."""
+        """Lazy-initialize the Gemini client model candidate on first use without blocking network pings."""
         if self._initialized:
             return
         self._initialized = True
@@ -495,9 +591,14 @@ class ResponseGenerator:
 
         try:
             import google.generativeai as genai
-            genai.configure(api_key=settings.GEMINI_API_KEY)
 
-            # Use the API compatible with google-generativeai 0.5.x
+            api_keys = [k.strip() for k in settings.GEMINI_API_KEY.split(",") if k.strip()]
+            if not api_keys:
+                return
+
+            # Store configured keys and set default primary model
+            self._api_keys = api_keys
+            genai.configure(api_key=api_keys[0])
             self._model = genai.GenerativeModel(
                 model_name="gemini-1.5-flash",
                 generation_config={
@@ -506,12 +607,7 @@ class ResponseGenerator:
                     "max_output_tokens": 350,
                 },
             )
-            # Test the connection with a quick ping
-            test = self._model.generate_content("Say: OK")
-            if test and test.text:
-                logger.info("Gemini 1.5 Flash connected and ready.")
-            else:
-                raise ValueError("Gemini test call returned empty response")
+            logger.info("Gemini AI model client initialized.")
         except Exception as e:
             logger.error(f"Gemini initialization failed: {e}. Using smart fallback mode.")
             self._model = None

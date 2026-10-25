@@ -1,0 +1,1426 @@
+/**
+ * MindCare AI — Trigger Detective Dataset & Cognitive Distortion Guide
+ * 
+ * 30 original scenarios across 5 categories designed to teach Cognitive Behavioral
+ * Therapy (CBT) thought-record identification and balanced cognitive reframing.
+ */
+
+export type TriggerCategory = "workplace" | "relationships" | "social" | "academics_finance" | "health_body";
+
+export type DistortionType =
+  | "Catastrophizing"
+  | "Mind Reading"
+  | "All-or-Nothing"
+  | "Emotional Reasoning"
+  | "Personalization"
+  | "Mental Filter"
+  | "Should Statements"
+  | "Fortune Telling";
+
+export type ReframeArchetype = "cognitive_reframe" | "catastrophic_spiral" | "toxic_positivity" | "avoidant_suppression";
+
+export interface ReframeOption {
+  id: string;
+  text: string;
+  archetype: ReframeArchetype;
+  isBestReframe: boolean;
+  impactFeedback: string;
+}
+
+export interface TriggerScenario {
+  id: string;
+  category: TriggerCategory;
+  categoryLabel: string;
+  title: string;
+  situation: string;
+  automaticThought: string;
+  distortion: DistortionType;
+  clues: string[];
+  options: ReframeOption[];
+  cbtRationale: string;
+}
+
+export const DISTORTION_DEFINITIONS: Record<DistortionType, { name: string; tagClass: string; description: string }> = {
+  "Catastrophizing": {
+    name: "Catastrophizing",
+    tagClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    description: "Assuming the worst possible catastrophe is inevitable, blowing potential risks out of proportion.",
+  },
+  "Mind Reading": {
+    name: "Mind Reading",
+    tagClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+    description: "Believing you know what others are thinking without verifiable evidence, usually assuming disapproval.",
+  },
+  "All-or-Nothing": {
+    name: "All-or-Nothing Thinking",
+    tagClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+    description: "Viewing experiences in rigid black-and-white extremes (absolute success vs complete failure).",
+  },
+  "Emotional Reasoning": {
+    name: "Emotional Reasoning",
+    tagClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    description: "Assuming that because you feel anxious, guilty, or inadequate, the subjective feeling must be an objective reality.",
+  },
+  "Personalization": {
+    name: "Personalization",
+    tagClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    description: "Taking full personal responsibility for external outcomes or other people's negative moods.",
+  },
+  "Mental Filter": {
+    name: "Mental Filtering",
+    tagClass: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+    description: "Fixating exclusively on one single negative detail while ignoring an entire sea of positive feedback.",
+  },
+  "Should Statements": {
+    name: "Should / Must Statements",
+    tagClass: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
+    description: "Holding rigid self-imposed rules ('I should never feel stressed') that generate guilt and frustration.",
+  },
+  "Fortune Telling": {
+    name: "Fortune Telling",
+    tagClass: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20",
+    description: "Predicting that future events will turn out disastrously as if it were a guaranteed foregone conclusion.",
+  },
+};
+
+export const TRIGGER_SCENARIOS: TriggerScenario[] = [
+  // ==========================================
+  // CATEGORY 1: WORKPLACE (Scenarios 1-6)
+  // ==========================================
+  {
+    id: "trg-01",
+    category: "workplace",
+    categoryLabel: "Workplace & Career",
+    title: "The Unanswered Slack Message",
+    situation: "You sent your manager an important project draft two hours ago. They read it but haven't replied yet, though they are actively posting in team channels.",
+    automaticThought: "\"They hate my draft and realize I have no idea what I'm doing. I'm going to get replaced.\"",
+    distortion: "Mind Reading",
+    clues: [
+      "Are there operational explanations for why someone might read a message and reply later?",
+      "Has your manager ever expressed that you are incompetent, or is this an assumed thought?",
+    ],
+    cbtRationale: "Assuming you know someone's silent thoughts without objective evidence is classic Mind Reading. A balanced reframe acknowledges your own discomfort while testing realistic hypotheses.",
+    options: [
+      {
+        id: "trg-01-a",
+        text: "Managers balance dozens of urgent interruptions. Reading a draft doesn't imply disapproval; a thoughtful review simply takes dedicated time.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Masterful reframe! You separate your anxiety from the objective reality of a busy workday.",
+      },
+      {
+        id: "trg-01-b",
+        text: "I knew I wasn't cut out for this job. I should start packing my desk before they officially write me up.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "This spiral escalates the cognitive distortion into full impostor panic without evidence.",
+      },
+      {
+        id: "trg-01-c",
+        text: "Everything is amazing! My draft is probably the greatest piece of work they've ever seen!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Superficial optimism bypasses genuine evaluation and doesn't build real emotional resilience.",
+      },
+      {
+        id: "trg-01-d",
+        text: "Delete the draft, pretend I never sent it, and avoid my manager in tomorrow's standup meeting.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Avoidance reinforces workplace anxiety and prevents normal professional communication.",
+      },
+    ],
+  },
+  {
+    id: "trg-02",
+    category: "workplace",
+    categoryLabel: "Workplace & Career",
+    title: "One Critique in an Annual Review",
+    situation: "During your performance evaluation, your supervisor gave you 9 ratings of 'Exceeds Expectations' and one note suggesting you 'tighten documentation turnaround'.",
+    automaticThought: "\"My entire year was a sham. That single critique proves they think I'm sloppy and disorganized.\"",
+    distortion: "Mental Filter",
+    clues: [
+      "What percentage of the review was overwhelmingly positive?",
+      "Is constructive feedback proof of total failure, or standard professional refinement?",
+    ],
+    cbtRationale: "Filtering out 9 glowing commendations to ruminate solely on one actionable suggestion exemplifies Mental Filtering.",
+    options: [
+      {
+        id: "trg-02-a",
+        text: "Constructive feedback on documentation turnaround is normal growth. 90% of my review celebrated high impact, which proves my value.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Accurate perspective! You integrate the compliment with an actionable growth point.",
+      },
+      {
+        id: "trg-02-b",
+        text: "The good ratings were just pity points. The documentation note is what they really think of me.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Disqualifying positive evidence is a destructive companion to mental filtering.",
+      },
+      {
+        id: "trg-02-c",
+        text: "My boss doesn't know anything about documentation anyway, so I can ignore everything they wrote.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Defensive dismissal prevents constructive professional skill building.",
+      },
+      {
+        id: "trg-02-d",
+        text: "Negative feedback doesn't exist if you manifest pure career abundance and 100% perfection!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Denial of feedback prevents learning and leaves core insecurity untouched.",
+      },
+    ],
+  },
+  {
+    id: "trg-03",
+    category: "workplace",
+    categoryLabel: "Workplace & Career",
+    title: "The Stumbled Slide Transition",
+    situation: "While presenting quarterly metrics to leadership, you stumbled over a slide, paused for 5 seconds to find your notes, and then smoothly finished the presentation.",
+    automaticThought: "\"I completely humiliated myself. Everyone was laughing on mute; my credibility is permanently destroyed.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Did the meeting derail, or did you finish answering all questions coherently?",
+      "When someone else stumbles over notes for five seconds, do you lose all respect for them?",
+    ],
+    cbtRationale: "Projecting total professional destruction from a 5-second human pause is Catastrophizing.",
+    options: [
+      {
+        id: "trg-03-a",
+        text: "A 5-second pause feels huge internally, but to the audience, it was just a brief breath. I delivered the data and handled questions effectively.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Spot-on reframe! Internal perception of time during adrenaline surges is notoriously exaggerated.",
+      },
+      {
+        id: "trg-03-b",
+        text: "I should never present again. Every leader in that room now views me as completely incompetent.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Catastrophizing turns a minor hiccup into a career-ending conviction.",
+      },
+      {
+        id: "trg-03-c",
+        text: "I'll never prepare slides again so I don't give myself the chance to make a fool of myself.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Avoidance shrinks your comfort zone and increases anticipation anxiety for future presentations.",
+      },
+      {
+        id: "trg-03-d",
+        text: "Failure is an illusion! That pause was actually a strategic dramatic pause of pure genius!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Pretending an awkward moment was intentional genius avoids honest self-acceptance.",
+      },
+    ],
+  },
+  {
+    id: "trg-04",
+    category: "workplace",
+    categoryLabel: "Workplace & Career",
+    title: "The Reassigned Client Account",
+    situation: "Your department head reassigns an enterprise client to a senior teammate and asks you to focus on an internal infrastructure overhaul.",
+    automaticThought: "\"They are silently demoting me because I'm not good enough to handle client-facing responsibilities.\"",
+    distortion: "All-or-Nothing",
+    clues: [
+      "Did leadership explain that infrastructure work is a strategic priority?",
+      "Is an internal reallocation always a negative verdict on capability?",
+    ],
+    cbtRationale: "Equating project pivots strictly to binary victory or defeat ignores complex operational resourcing.",
+    options: [
+      {
+        id: "trg-04-a",
+        text: "Team priorities fluctuate. Leading infrastructure requires deep operational trust, and I can ask my manager how this positions my long-term trajectory.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Empowered response! You seek clarity and recognize the value of backend operational mastery.",
+      },
+      {
+        id: "trg-04-b",
+        text: "If I'm not running enterprise clients, I am basically useless to this company.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "All-or-nothing thinking reduces varied career opportunities into black-and-white worth.",
+      },
+      {
+        id: "trg-04-c",
+        text: "I won't give my full effort to this new project since they obviously don't value my potential.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Passive resistance sabotages your own professional reputation.",
+      },
+      {
+        id: "trg-04-d",
+        text: "Everything happens for a secret cosmic reason, so I shouldn't even ask any questions!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Bypasses proactive communication with fatalistic platitudes.",
+      },
+    ],
+  },
+  {
+    id: "trg-05",
+    category: "workplace",
+    categoryLabel: "Workplace & Career",
+    title: "The Sudden Sunday Evening Email",
+    situation: "Your director sends an email on Sunday at 7 PM with the subject: 'Quick alignment tomorrow morning at 9 AM.' No agenda is attached.",
+    automaticThought: "\"I'm getting laid off or severely reprimanded. My whole weekend is ruined.\"",
+    distortion: "Fortune Telling",
+    clues: [
+      "How many times have vague morning syncs turned out to be ordinary task updates?",
+      "Can you know what the meeting is about before you actually attend?",
+    ],
+    cbtRationale: "Predicting a catastrophic outcome without evidence is textbook Fortune Telling.",
+    options: [
+      {
+        id: "trg-05-a",
+        text: "Leaders frequently send calendar invitations when clearing their inbox. I have no evidence of trouble, and worrying tonight cannot alter tomorrow's agenda.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Grounded boundary! You protect your rest and recognize the lack of concrete evidence.",
+      },
+      {
+        id: "trg-05-b",
+        text: "I can't sleep tonight. I must stay up reviewing every project log from the past 6 months to prepare for the ambush.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Panic rumination burns your energy and leaves you exhausted for the actual meeting.",
+      },
+      {
+        id: "trg-05-c",
+        text: "Call in sick tomorrow so they can't fire me in the morning.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Avoidance magnifies anxiety and postpones ordinary professional synchronization.",
+      },
+      {
+        id: "trg-05-d",
+        text: "They are definitely calling to give me an immediate massive promotion and salary doubling!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Counter-delusion creates an unrealistic emotional swing.",
+      },
+    ],
+  },
+  {
+    id: "trg-06",
+    category: "workplace",
+    categoryLabel: "Workplace & Career",
+    title: "The Flawed Spreadsheet Formula",
+    situation: "You notice a formula mistake in a budget you shared with another team. It caused a 4% variance that is easily corrected before the final submission.",
+    automaticThought: "\"I should never make elementary calculation errors. I am an absolute fraud.\"",
+    distortion: "Should Statements",
+    clues: [
+      "Do human professionals occasionally make mathematical typos in complex spreadsheets?",
+      "Is making an error the same as being a fraud?",
+    ],
+    cbtRationale: "'Should statements' impose perfectionistic tyranny that interprets ordinary errors as fundamental character flaws.",
+    options: [
+      {
+        id: "trg-06-a",
+        text: "Errors happen in complex data modeling. Catching and correcting it promptly is the definition of diligent responsibility, not incompetence.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Self-compassionate and accurate! Spotting your own error and updating it is professional excellence.",
+      },
+      {
+        id: "trg-06-b",
+        text: "I shouldn't even be allowed near financial tools. I will never forgive myself for this blunder.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Punishing yourself with rigid rules creates debilitating performance paralysis.",
+      },
+      {
+        id: "trg-06-c",
+        text: "Leave the error alone and hope nobody notices the 4% difference in audit.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Concealing a known error turns a minor typo into an integrity concern.",
+      },
+      {
+        id: "trg-06-d",
+        text: "Mistakes are just magical sparkles on the canvas of life, so precision doesn't matter!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Flippancy ignores the practical need for accurate accounting.",
+      },
+    ],
+  },
+
+  // ==========================================
+  // CATEGORY 2: RELATIONSHIPS (Scenarios 7-12)
+  // ==========================================
+  {
+    id: "trg-07",
+    category: "relationships",
+    categoryLabel: "Romantic & Interpersonal",
+    title: "Partner's Quiet Mood at Dinner",
+    situation: "Your partner arrives home exhausted, speaks in short sentences, and stares quietly at their phone during dinner without initiating conversation.",
+    automaticThought: "\"They are silently furious with me for something I did wrong. Our relationship is falling apart.\"",
+    distortion: "Personalization",
+    clues: [
+      "Could their low energy be related to their demanding commute or stressful workday?",
+      "Did they state they were upset with you, or are you assuming their emotional state revolves around you?",
+    ],
+    cbtRationale: "Assuming another person's fatigue or withdrawal is a direct indictment of you is Personalization.",
+    options: [
+      {
+        id: "trg-07-a",
+        text: "People have low energy days that have nothing to do with me. I can offer gentle support or ask if they need quiet space to decompress.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Healthy differentiation! You respect their personal emotional space without taking it personally.",
+      },
+      {
+        id: "trg-07-b",
+        text: "I always ruin their evenings. I must interrogate them right now until they confess what I did wrong.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Demanding validation when a partner is drained triggers unnecessary conflict.",
+      },
+      {
+        id: "trg-07-c",
+        text: "Give them the cold shoulder in return to teach them a lesson about being moody.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Passive-aggressive retaliation damages intimacy and trust.",
+      },
+      {
+        id: "trg-07-d",
+        text: "True soulmates never have bad days or feel tired! We must always radiate unbridled joy!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Unrealistic relationship expectations invalidate normal human emotional cycles.",
+      },
+    ],
+  },
+  {
+    id: "trg-08",
+    category: "relationships",
+    categoryLabel: "Romantic & Interpersonal",
+    title: "Left on 'Read' by a Best Friend",
+    situation: "You text your close friend a heartfelt reflection about your weekend. They opened the message 4 hours ago but haven't replied.",
+    automaticThought: "\"They find me exhausting and self-centered. They are slowly ghosting me because they don't value our bond.\"",
+    distortion: "Mind Reading",
+    clues: [
+      "Do you ever open a text, get distracted by life or work, and intend to answer later?",
+      "Has this friend consistently shown care in person over the years?",
+    ],
+    cbtRationale: "Interpreting delayed digital communication as social rejection without considering daily logistics is Mind Reading.",
+    options: [
+      {
+        id: "trg-08-a",
+        text: "A 4-hour delay means they're busy or want to give my message the thoughtful attention it deserves when they have time.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Mature and grounded! Real friendships aren't judged on rapid text response times.",
+      },
+      {
+        id: "trg-08-b",
+        text: "I should block them immediately before they have the satisfaction of cutting me off completely.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Preemptive abandonment damages healthy long-term connections.",
+      },
+      {
+        id: "trg-08-c",
+        text: "Spam them with 8 follow-up question marks to demand immediate attention.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Anxious protesting strains relationships and disrespects boundaries.",
+      },
+      {
+        id: "trg-08-d",
+        text: "Friends never need space or time! Everything is instantly 100% fine always!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Dismissing your mild vulnerability prevents honest self-reflection.",
+      },
+    ],
+  },
+  {
+    id: "trg-09",
+    category: "relationships",
+    categoryLabel: "Romantic & Interpersonal",
+    title: "The Disagreed Vacation Destination",
+    situation: "You want to spend a week resting at a quiet beach, while your partner proposes an active sightseeing trip in a bustling city.",
+    automaticThought: "\"We disagree on everything fundamental. If we can't agree on a vacation, we are incompatible and doomed.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Do healthy couples frequently have differing recreation preferences?",
+      "Is differing vacation taste evidence of deep structural incompatibility?",
+    ],
+    cbtRationale: "Blowing a routine recreational disagreement into an apocalyptic verdict on relationship compatibility is Catastrophizing.",
+    options: [
+      {
+        id: "trg-09-a",
+        text: "Different vacation styles are normal. We can collaborate on an itinerary that blends restful beach days with city exploration, or take turns.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Excellent problem-solving mindset! Compromise is a hallmark of healthy partnership.",
+      },
+      {
+        id: "trg-09-b",
+        text: "This proves we have zero common ground. We might as well cancel the trip and consider separating.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Catastrophizing turns everyday logistics into relationship crises.",
+      },
+      {
+        id: "trg-09-c",
+        text: "Agree to their trip with a forced smile, but harbor deep resentment the entire week.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Fawning and silent martyrdom breed long-term bitterness.",
+      },
+      {
+        id: "trg-09-d",
+        text: "As long as we have love, geography doesn't exist and we don't need any planning!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Romantic idealism won't resolve practical travel planning.",
+      },
+    ],
+  },
+  {
+    id: "trg-10",
+    category: "relationships",
+    categoryLabel: "Romantic & Interpersonal",
+    title: "The Forgotten Anniversary Dinner",
+    situation: "Your spouse forgot to book the restaurant for your dating anniversary due to an intense work week.",
+    automaticThought: "\"If they truly loved me, they would never forget this. Their forgetfulness proves I don't matter to them.\"",
+    distortion: "Emotional Reasoning",
+    clues: [
+      "Does high cognitive stress and burnout affect working memory in otherwise loving partners?",
+      "Is cognitive slip-up the same as an intentional statement on affection?",
+    ],
+    cbtRationale: "'Because I feel hurt, my partner must have acted out of malice or apathy' is classic Emotional Reasoning.",
+    options: [
+      {
+        id: "trg-10-a",
+        text: "It hurts that it was forgotten, but stress often impairs memory. Their forgetfulness is a symptom of cognitive overload, not a lack of love.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Balanced clarity! You validate your own disappointment without attributing malicious intent.",
+      },
+      {
+        id: "trg-10-b",
+        text: "They have checked out of this marriage. I will never celebrate another milestone with them.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Escalates a logistic lapse into a declaration of emotional divorce.",
+      },
+      {
+        id: "trg-10-c",
+        text: "Pretend I didn't care either and order take-out in sullen silence.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Emotional withdrawal shuts down opportunities for apology and repair.",
+      },
+      {
+        id: "trg-10-d",
+        text: "Dates and anniversaries are worldly illusions! Only pure unconditional light matters!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Spiritual bypassing dismisses genuine relational needs.",
+      },
+    ],
+  },
+  {
+    id: "trg-11",
+    category: "relationships",
+    categoryLabel: "Romantic & Interpersonal",
+    title: "Parent's Unsolicited Advice",
+    situation: "During a weekend phone call, your parent asks why you haven't bought a home yet and shares housing listings you didn't ask for.",
+    automaticThought: "\"They still view me as an incompetent child who cannot manage adulthood without their micromanagement.\"",
+    distortion: "Mind Reading",
+    clues: [
+      "Could their questions stem from generational anxieties rather than a belief in your incompetence?",
+      "Can you maintain loving boundaries without accepting their anxiety as your truth?",
+    ],
+    cbtRationale: "Attributing parental anxiety directly to contempt for your adult autonomy is Mind Reading.",
+    options: [
+      {
+        id: "trg-11-a",
+        text: "Their fixation on homeownership reflects their generational playbook and anxiety, not my actual adult competence. I can set a calm boundary.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Wise boundary reframe! You recognize where their anxiety ends and your autonomy begins.",
+      },
+      {
+        id: "trg-11-b",
+        text: "I am a complete failure compared to everyone in my family. I should just surrender my life decisions to them.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Submitting to unexamined guilt erodes personal agency.",
+      },
+      {
+        id: "trg-11-c",
+        text: "Scream at them and hang up the phone so they never call me again.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Reactive anger escalates defensive loops rather than establishing firm boundaries.",
+      },
+      {
+        id: "trg-11-d",
+        text: "Parents are always 100% right about everything in the universe without exception!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Unconditional compliance ignores your personal life timing and financial reality.",
+      },
+    ],
+  },
+  {
+    id: "trg-12",
+    category: "relationships",
+    categoryLabel: "Romantic & Interpersonal",
+    title: "The Canceled Coffee Date",
+    situation: "A friend texts two hours prior to your scheduled coffee meetup: 'Hey, migraine hit me hard, so sorry, need to reschedule!'",
+    automaticThought: "\"They're just making an excuse. They had better plans come up and didn't want to spend time with me.\"",
+    distortion: "Mind Reading",
+    clues: [
+      "Do migraines genuinely disable people without notice?",
+      "Has this person rescheduled and followed through with you previously?",
+    ],
+    cbtRationale: "Disbelieving genuine medical vulnerability and interpreting it as personal rejection is Mind Reading.",
+    options: [
+      {
+        id: "trg-12-a",
+        text: "Migraines are debilitating and real. Taking care of their health is healthy, and we can easily find another date when they feel better.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Empathetic and grounded! You honor both their physical limitation and the security of your friendship.",
+      },
+      {
+        id: "trg-12-b",
+        text: "Nobody actually wants to spend time with me. I will stop trying to make friends altogether.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Overgeneralizing a single cancellation isolates you from connection.",
+      },
+      {
+        id: "trg-12-c",
+        text: "Reply with 'Whatever' and never invite them again.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Punishing friends for physical illness erodes mutual support.",
+      },
+      {
+        id: "trg-12-d",
+        text: "Cancellations are wonderful! Now I can sit alone and celebrate infinite solitude!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Forced enthusiasm masks normal mild disappointment.",
+      },
+    ],
+  },
+
+  // ==========================================
+  // CATEGORY 3: SOCIAL & PEER DYNAMICS (Scenarios 13-18)
+  // ==========================================
+  {
+    id: "trg-13",
+    category: "social",
+    categoryLabel: "Social Dynamics & Self-Consciousness",
+    title: "Laughter After You Walk By",
+    situation: "You walk past a group of colleagues chatting near the water cooler. A second after passing, you hear a loud burst of laughter.",
+    automaticThought: "\"They were definitely laughing at my outfit or the way I walk. Everyone was mocking me.\"",
+    distortion: "Personalization",
+    clues: [
+      "Could their ongoing conversation have concluded with a joke that had zero relation to you?",
+      "Is it realistic that colleagues are tracking your every physical step?",
+    ],
+    cbtRationale: "Assuming you are the center of everyone's amusement or derision is classic Personalization and Spotlight Effect.",
+    options: [
+      {
+        id: "trg-13-a",
+        text: "People laugh at their own private conversations. The world does not revolve around me, and their humor almost certainly had nothing to do with my presence.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Spot-on spotlight effect reframe! You liberate yourself from unnecessary self-consciousness.",
+      },
+      {
+        id: "trg-13-b",
+        text: "I must run to the restroom and inspect every stitch of my clothing because I am an embarrassment.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Compulsive checking reinforces social anxiety and hyper-vigilance.",
+      },
+      {
+        id: "trg-13-c",
+        text: "Confront them aggressively and demand to know what was so funny.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Hostile projection creates real awkwardness where none existed.",
+      },
+      {
+        id: "trg-13-d",
+        text: "Even if they're mocking me, I will smile radiantly because judgment cannot penetrate my aura!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Gritting teeth behind pseudo-spiritual armor ignores realistic cognitive grounding.",
+      },
+    ],
+  },
+  {
+    id: "trg-14",
+    category: "social",
+    categoryLabel: "Social Dynamics & Self-Consciousness",
+    title: "The Unattended Party Gathering",
+    situation: "You see photos on Instagram of several friends gathering for dinner at a new restaurant without you.",
+    automaticThought: "\"They deliberately excluded me because they find me boring. I have no true friends.\"",
+    distortion: "All-or-Nothing",
+    clues: [
+      "Do social groups sometimes organize spontaneous or small-capacity dinners based on proximity or work schedules?",
+      "Does not being present at one dinner negate years of shared connection?",
+    ],
+    cbtRationale: "Jumping from one uninvited evening to 'I have no true friends' is All-or-Nothing overgeneralization.",
+    options: [
+      {
+        id: "trg-14-a",
+        text: "It stings to feel left out, but casual gatherings often happen spontaneously without malicious exclusion. I can plan something fun with them next week.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Compassionate and proactive! You honor the sting while keeping the bigger friendship in view.",
+      },
+      {
+        id: "trg-14-b",
+        text: "I am officially an outcast. I will delete all social media and never speak to any of them again.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Dramatic withdrawal guarantees isolation based on an unverified assumption.",
+      },
+      {
+        id: "trg-14-c",
+        text: "Post passive-aggressive quotes on my story so they feel guilty for hurting me.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Indirect hostility breeds tension and confuses genuine communication.",
+      },
+      {
+        id: "trg-14-d",
+        text: "FOMO is fake news! Being alone on a Saturday night with cold leftovers is the highest state of bliss!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Pretending you feel overjoyed prevents acknowledging legitimate desires for connection.",
+      },
+    ],
+  },
+  {
+    id: "trg-15",
+    category: "social",
+    categoryLabel: "Social Dynamics & Self-Consciousness",
+    title: "Speaking Up in a Group of Experts",
+    situation: "During a community meetup, you share an opinion about environmental policy. An expert in the room asks: 'What data sources are you citing?'",
+    automaticThought: "\"They are publicly exposing me as an uneducated charlatan. I should never have spoken.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "In academic and expert settings, is asking for citations standard intellectual curiosity rather than personal hostility?",
+      "Is not knowing an exact citation proof that you are an impostor?",
+    ],
+    cbtRationale: "Viewing an intellectual question as public humiliation is Catastrophizing and Personalization.",
+    options: [
+      {
+        id: "trg-15-a",
+        text: "Asking for data sources is standard intellectual discourse, not an attack. I can share what I recall or say I'd love to review the literature further.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Poised and intellectually mature! Inquiry is an opportunity for learning, not humiliation.",
+      },
+      {
+        id: "trg-15-b",
+        text: "I've ruined my reputation in this community forever. Everyone knows I'm stupid now.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Turns an ordinary conversational question into a catastrophic self-indictment.",
+      },
+      {
+        id: "trg-15-c",
+        text: "Make up a fake university study on the spot so I don't look uneducated.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Deception driven by shame creates real credibility hazards.",
+      },
+      {
+        id: "trg-15-d",
+        text: "Facts and data don't matter because emotional intuition is always superior to all science!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Anti-intellectual deflection doesn't resolve social anxiety.",
+      },
+    ],
+  },
+  {
+    id: "trg-16",
+    category: "social",
+    categoryLabel: "Social Dynamics & Self-Consciousness",
+    title: "The Silent Group Chat",
+    situation: "You share a joke you found hilarious in your five-person friend group chat. 45 minutes pass with zero reactions or replies.",
+    automaticThought: "\"My sense of humor is cringe and awkward. They're all in a side chat making fun of my joke.\"",
+    distortion: "Mind Reading",
+    clues: [
+      "Are friends frequently caught in transit, meetings, family chores, or dinners?",
+      "Have you ever seen a message, smiled, and not reacted right away?",
+    ],
+    cbtRationale: "Fabricating a secret side chat mocking you based on a 45-minute delay is runaway Mind Reading.",
+    options: [
+      {
+        id: "trg-16-a",
+        text: "Mid-afternoon is busy for everyone. Silence in a group chat usually reflects daily life pacing, not a consensus referendum on my personality.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Brilliant reality check! People's silence is almost always about their own day, not you.",
+      },
+      {
+        id: "trg-16-b",
+        text: "I should delete the message, apologize profusely for disturbing them, and leave the chat.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Panicked appeasement turns an ordinary meme into unnecessary drama.",
+      },
+      {
+        id: "trg-16-c",
+        text: "Never participate in the group chat again to punish them for ignoring me.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Sulking erodes connection over harmless digital rhythms.",
+      },
+      {
+        id: "trg-16-d",
+        text: "My joke was so profoundly comedic that their brains simply froze in sheer awe!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Delusional self-aggrandizement avoids genuine humility.",
+      },
+    ],
+  },
+  {
+    id: "trg-17",
+    category: "social",
+    categoryLabel: "Social Dynamics & Self-Consciousness",
+    title: "Arriving Underdressed to an Event",
+    situation: "You arrive at a networking cocktail in smart casual attire, only to find most attendees wearing formal suits and dresses.",
+    automaticThought: "\"Everyone is staring at me in disgust. I look like a clown and don't belong in this caliber of company.\"",
+    distortion: "Emotional Reasoning",
+    clues: [
+      "Does clothing formality change your actual professional insights and value?",
+      "Are other guests preoccupied with their own conversations and drinks?",
+    ],
+    cbtRationale: "'I feel self-conscious and awkward, therefore everyone is disgusted by me' is classic Emotional Reasoning.",
+    options: [
+      {
+        id: "trg-17-a",
+        text: "Smart casual is completely clean and presentable. People remember warmth, competence, and engaging conversation far more than dress codes.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Anchored confidence! You pivot from wardrobe anxiety to authentic presence.",
+      },
+      {
+        id: "trg-17-b",
+        text: "I must immediately turn around, call a cab, and hide in my apartment for the rest of the week.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Fleeing reinforces social shame and robs you of meaningful networking.",
+      },
+      {
+        id: "trg-17-c",
+        text: "This proves I have zero social etiquette and will never succeed in high-level circles.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Overgeneralizes a slight dress-code variance into a permanent social defect.",
+      },
+      {
+        id: "trg-17-d",
+        text: "Suits are tools of oppressive bourgeois conditioning anyway, so I am morally superior!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Defensive arrogance masks legitimate social discomfort.",
+      },
+    ],
+  },
+  {
+    id: "trg-18",
+    category: "social",
+    categoryLabel: "Social Dynamics & Self-Consciousness",
+    title: "The Flubbed Greeting",
+    situation: "When an acquaintance says 'Enjoy your flight!', you reflexively answer 'You too!' before realizing they aren't traveling.",
+    automaticThought: "\"I am impossibly awkward. They must think I have severe cognitive deficiencies.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Is 'You too!' one of the most common reflexive verbal slips in the English language?",
+      "Has anyone ever held a conversational slip against you for more than 5 seconds?",
+    ],
+    cbtRationale: "Blowing a universal reflexive slip into an irreversible verdict on your cognitive capability is Catastrophizing.",
+    options: [
+      {
+        id: "trg-18-a",
+        text: "Verbal auto-pilots happen to literally everyone. A quick laugh or chuckle normalizes it immediately and makes me relatable.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Delightful self-compassion! Humor disarms social shame immediately.",
+      },
+      {
+        id: "trg-18-b",
+        text: "I can never show my face in this terminal again. I will cringe over this for the next ten years.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Mortification over everyday slips feeds chronic social anxiety.",
+      },
+      {
+        id: "trg-18-c",
+        text: "Look down at my phone and pretend I didn't say anything at all.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Awkward avoidance draws more attention than a casual smile.",
+      },
+      {
+        id: "trg-18-d",
+        text: "Maybe on a metaphysical plane they ARE traveling through astral dimensions, so I was 100% accurate!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Absurd justifications prevent simply laughing at human quirks.",
+      },
+    ],
+  },
+
+  // ==========================================
+  // CATEGORY 4: ACADEMICS & FINANCE (Scenarios 19-24)
+  // ==========================================
+  {
+    id: "trg-19",
+    category: "academics_finance",
+    categoryLabel: "Academics & Financial Security",
+    title: "The Unexpected Car Repair Estimate",
+    situation: "Your mechanic inspects a grinding noise in your brakes and quotes a $650 repair, which requires dipping into your emergency fund.",
+    automaticThought: "\"I am financially irresponsible and will never build real wealth. One expense ruins everything.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Isn't an emergency savings fund created specifically for unexpected repairs like brakes?",
+      "Does an automotive maintenance expense mean your entire financial future is doomed?",
+    ],
+    cbtRationale: "Treating the proper use of an emergency fund as proof of total financial failure is Catastrophizing.",
+    options: [
+      {
+        id: "trg-19-a",
+        text: "This is precisely why I built an emergency reserve. Using it to fix safety-critical brakes is responsible stewardship, and I can replenish it over upcoming paychecks.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Pragmatic mastery! You celebrate your preparedness rather than shaming yourself.",
+      },
+      {
+        id: "trg-19-b",
+        text: "I am cursed with money. I will end up broke and destitute on the streets over this car.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Escalating a $650 car repair into destitution fuels paralyzing financial doom.",
+      },
+      {
+        id: "trg-19-c",
+        text: "Decline the repair and drive with failed brakes until the car stops functioning completely.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Endangering your physical safety to avoid spending emergency savings is high-risk avoidance.",
+      },
+      {
+        id: "trg-19-d",
+        text: "Money is just numbers in a matrix! If I manifest wealth, the brakes will repair themselves!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Magical thinking cannot fix mechanical friction components.",
+      },
+    ],
+  },
+  {
+    id: "trg-20",
+    category: "academics_finance",
+    categoryLabel: "Academics & Financial Security",
+    title: "The B-Minus on a Midterm Exam",
+    situation: "After studying for two weeks, you receive a B-minus on a challenging organic chemistry exam where the class average was a C-plus.",
+    automaticThought: "\"I'm not cut out for science. If I can't ace this midterm, medical school or graduate school is impossible.\"",
+    distortion: "All-or-Nothing",
+    clues: [
+      "Did you score above the class median on a notoriously difficult exam?",
+      "Do competitive programs accept candidates who demonstrated resilience across academic hurdles?",
+    ],
+    cbtRationale: "Viewing any grade below an 'A' as total disqualification is All-or-Nothing thinking.",
+    options: [
+      {
+        id: "trg-20-a",
+        text: "A B-minus on a notoriously tough exam is above average. I can review the specific concepts I missed with the TA and refine my prep for the final.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Growth-mindset clarity! You evaluate the curve objectively and target specific academic improvements.",
+      },
+      {
+        id: "trg-20-b",
+        text: "I should drop out of the major today. Clearly everyone else has superior genetic intelligence.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Fixed-mindset despair discounts effort and normal learning curves.",
+      },
+      {
+        id: "trg-20-c",
+        text: "Hide the exam in a drawer, never look at the corrections, and hope the final is somehow easier.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Avoiding missed questions guarantees repeating the same errors on the final exam.",
+      },
+      {
+        id: "trg-20-d",
+        text: "Grades are an illusion of academia! I already have the Nobel Prize of life in my heart!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Superficial bravado avoids the rigorous study required for mastery.",
+      },
+    ],
+  },
+  {
+    id: "trg-21",
+    category: "academics_finance",
+    categoryLabel: "Academics & Financial Security",
+    title: "Peer's High-Paying Job Offer",
+    situation: "A classmate from your cohort announces they accepted a lucrative salary offer at a premier tech firm, while you are still interviewing.",
+    automaticThought: "\"I'm hopelessly behind in life. Their success highlights how mediocre and unmarketable I am.\"",
+    distortion: "Emotional Reasoning",
+    clues: [
+      "Does someone else's hiring timeline determine your qualifications or future offers?",
+      "Are career trajectories linear and identical for all individuals?",
+    ],
+    cbtRationale: "'I feel envious and insecure, therefore I am objectively unmarketable' is Emotional Reasoning.",
+    options: [
+      {
+        id: "trg-21-a",
+        text: "Their offer proves that employers are hiring from our cohort. Career paths unfold on individual timelines, and their milestone doesn't diminish my skills.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Abundance perspective! You see proof of opportunity rather than zero-sum defeat.",
+      },
+      {
+        id: "trg-21-b",
+        text: "I might as well stop applying. No premier firm would ever choose me over candidates like them.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Comparative defeatism stops your interview momentum right before a breakthrough.",
+      },
+      {
+        id: "trg-21-c",
+        text: "Unfriend them and badmouth the company that hired them to make myself feel better.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Resentment burns professional bridges and clouds your own networking.",
+      },
+      {
+        id: "trg-21-d",
+        text: "Corporate money brings pure misery anyway, so having no job offer is actually a blessing!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Sour grapes rationalization hides honest vocational aspirations.",
+      },
+    ],
+  },
+  {
+    id: "trg-22",
+    category: "academics_finance",
+    categoryLabel: "Academics & Financial Security",
+    title: "The Overspent Monthly Dining Budget",
+    situation: "At the end of the month, your budgeting app alerts you that you spent $180 more on dining out with friends than you had budgeted.",
+    automaticThought: "\"I have zero self-discipline. I will never achieve financial independence because I can't even stick to a simple budget.\"",
+    distortion: "All-or-Nothing",
+    clues: [
+      "Did you maintain your rent, utilities, and debt payments on time despite the variance?",
+      "Is budgeting a dynamic learning tool or a rigid moral pass/fail test?",
+    ],
+    cbtRationale: "Labeling oneself as having 'zero self-discipline' over a budget variance is All-or-Nothing thinking.",
+    options: [
+      {
+        id: "trg-22-a",
+        text: "I overspent on dining during a social month, but all essential bills are paid. I can adjust next month's dining allowance to be more realistic or cook two extra meals at home.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Constructive financial maturity! You treat data as feedback, not moral condemnation.",
+      },
+      {
+        id: "trg-22-b",
+        text: "Since I broke the budget, I might as well splurge on luxury clothes and give up on saving completely.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "The 'what-the-hell' effect turns a minor variance into a major financial spiral.",
+      },
+      {
+        id: "trg-22-c",
+        text: "Delete the budgeting app so I never have to look at numbers that cause me guilt.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Financial blindness increases anxiety and prevents long-term wealth building.",
+      },
+      {
+        id: "trg-22-d",
+        text: "Every dollar spent on sushi is an investment in culinary soul vibration!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Rationalizing budget leaks prevents intentional financial alignment.",
+      },
+    ],
+  },
+  {
+    id: "trg-23",
+    category: "academics_finance",
+    categoryLabel: "Academics & Financial Security",
+    title: "The Prolonged Thesis Revision",
+    situation: "Your academic advisor returns your thesis chapter with heavy red-ink track changes and a note saying: 'Needs structural reorganization before submission.'",
+    automaticThought: "\"My research is complete garbage. My advisor secretly regrets agreeing to supervise me.\"",
+    distortion: "Mind Reading",
+    clues: [
+      "Is rigorous revision and red ink the hallmark of serious academic mentorship?",
+      "Would a busy advisor spend hours marking up a paper if they believed it was unsalvageable?",
+    ],
+    cbtRationale: "Interpreting rigorous mentorship as personal contempt is Mind Reading.",
+    options: [
+      {
+        id: "trg-23-a",
+        text: "Detailed critical feedback is the greatest gift an advisor can give; it means they believe the work is worth refining for publication. I can tackle the outline step-by-step.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Scholarly wisdom! Heavy feedback is evidence of investment, not rejection.",
+      },
+      {
+        id: "trg-23-b",
+        text: "I should withdraw from graduate school. My advisor clearly hates my intellect.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Surrendering your degree over standard revision cycles is tragic and unnecessary.",
+      },
+      {
+        id: "trg-23-c",
+        text: "Argue with the advisor that their editing suggestions ruin your artistic flow.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Defensiveness alienates the very mentors who write your recommendation letters.",
+      },
+      {
+        id: "trg-23-d",
+        text: "Any draft I write is already a timeless masterpiece that mortal minds cannot comprehend!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Narcissistic armor prevents genuine intellectual maturation.",
+      },
+    ],
+  },
+  {
+    id: "trg-24",
+    category: "academics_finance",
+    categoryLabel: "Academics & Financial Security",
+    title: "Market Volatility in Retirement Fund",
+    situation: "You log into your retirement index fund and notice the balance dropped by 3.8% over the past two weeks due to global macroeconomic headlines.",
+    automaticThought: "\"The global financial system is collapsing. I will lose every cent I have saved and work until I'm 90.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Are routine short-term dips standard historical behavior in diversified index funds?",
+      "Is your investment timeline measured in weeks or across decades?",
+    ],
+    cbtRationale: "Projecting total systemic collapse from a routine 3.8% index dip is Catastrophizing.",
+    options: [
+      {
+        id: "trg-24-a",
+        text: "Short-term market volatility is normal. My investment horizon spans decades, and historically, diversified index funds have steadily compounded through hundreds of news cycles.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Long-term financial discipline! You distinguish market noise from long-term capital compounding.",
+      },
+      {
+        id: "trg-24-b",
+        text: "Sell all equities right now at the bottom of the dip and put all cash under the mattress.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Panic selling locks in temporary paper losses into permanent financial injury.",
+      },
+      {
+        id: "trg-24-c",
+        text: "Check the portfolio balance every 15 minutes and lose sleep over candlestick charts.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Compulsive tracking feeds market anxiety without altering outcomes.",
+      },
+      {
+        id: "trg-24-d",
+        text: "Money isn't real, inflation doesn't exist, and the universe will pay my retirement bills!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Detachment from reality prevents pragmatic retirement planning.",
+      },
+    ],
+  },
+
+  // ==========================================
+  // CATEGORY 5: HEALTH & SOMATIC FOCUS (Scenarios 25-30)
+  // ==========================================
+  {
+    id: "trg-25",
+    category: "health_body",
+    categoryLabel: "Health & Somatic Sensitivity",
+    title: "A Sudden Flutter in the Chest",
+    situation: "While sitting quietly at your desk after drinking a strong espresso, you notice a brief skipped heartbeat or flutter in your chest.",
+    automaticThought: "\"I am having a dangerous cardiac emergency right now. My heart is failing.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Are premature ventricular contractions (PVCs) common and benign, especially after caffeine intake?",
+      "Are you experiencing actual radiating crushing pain, or hyper-focusing on an adrenaline sensation?",
+    ],
+    cbtRationale: "Catastrophic misinterpretation of benign somatic sensations is the core engine of health anxiety and panic attacks.",
+    options: [
+      {
+        id: "trg-25-a",
+        text: "Occasional heart flutters are common, especially with caffeine and fatigue. I can take slow diaphragmatic breaths, hydrate, and notice that my pulse is steady.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Masterclass somatic reframe! Down-regulating panic breaks the adrenaline-hyperventilation loop.",
+      },
+      {
+        id: "trg-25-b",
+        text: "Call emergency services immediately and start frantically Googling cardiac symptoms.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Googling bodily symptoms during anxiety spikes dramatically escalates heart rate and panic.",
+      },
+      {
+        id: "trg-25-c",
+        text: "Never exercise or exert myself physically again to protect my fragile heart.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Kinesiophobia (fear of movement) degrades actual cardiovascular health over time.",
+      },
+      {
+        id: "trg-25-d",
+        text: "Illness doesn't exist for people of high vibrational frequency!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Denying physiological reality prevents grounded self-care.",
+      },
+    ],
+  },
+  {
+    id: "trg-26",
+    category: "health_body",
+    categoryLabel: "Health & Somatic Sensitivity",
+    title: "The Delayed Lab Test Result",
+    situation: "You had a routine annual blood panel drawn on Tuesday. The clinic portal said results would post in 48 hours, but Friday afternoon arrives with no update.",
+    automaticThought: "\"They found something catastrophic and doctors are holding an emergency board meeting before breaking the news.\"",
+    distortion: "Fortune Telling",
+    clues: [
+      "Do clinical laboratories frequently experience backlog, reagent shortages, or weekend turnaround delays?",
+      "If a critical emergency arose, would a clinic wait quietly or contact you immediately?",
+    ],
+    cbtRationale: "Assuming administrative delay equals terminal illness is severe Fortune Telling and Catastrophizing.",
+    options: [
+      {
+        id: "trg-26-a",
+        text: "Lab delays are almost always administrative backlogs. If an acute abnormality existed, the on-call physician would phone immediately. I can call Monday morning for an update.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Calm and logical! Clinics prioritize contacting critical patients; delays usually mean routine processing.",
+      },
+      {
+        id: "trg-26-b",
+        text: "I must write my final will and testament this weekend because my health is clearly doomed.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Extreme catastrophic spirals rob you of present peace over lab paperwork delays.",
+      },
+      {
+        id: "trg-26-c",
+        text: "Never check the portal or answer medical calls again so I don't have to hear bad news.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Medical avoidance converts treatable health issues into chronic risks.",
+      },
+      {
+        id: "trg-26-d",
+        text: "Blood doesn't contain truths anyway, only spiritual crystal energy matters!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Dismissing diagnostic medicine is irresponsible and hazardous.",
+      },
+    ],
+  },
+  {
+    id: "trg-27",
+    category: "health_body",
+    categoryLabel: "Health & Somatic Sensitivity",
+    title: "Struggling on the First Gym Workout",
+    situation: "After two months away from the gym, you can only manage 15 minutes on the elliptical before your calves ache and you feel breathless.",
+    automaticThought: "\"I've completely lost all fitness. I am permanently out of shape and starting over is pointless.\"",
+    distortion: "All-or-Nothing",
+    clues: [
+      "Does physiological deconditioning naturally reverse after a few consistent workouts?",
+      "Is 15 minutes of cardio on day one a failure or a solid start?",
+    ],
+    cbtRationale: "Declaring all fitness permanently lost after day one is All-or-Nothing thinking.",
+    options: [
+      {
+        id: "trg-27-a",
+        text: "Showing up for 15 minutes after two months off is a real victory. Muscle memory and aerobic conditioning adapt quickly with steady, gentle consistency.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Sensible and motivating! Consistency beats intensity when rebuilding physical habits.",
+      },
+      {
+        id: "trg-27-b",
+        text: "I am hopeless. I might as well throw away my running shoes and accept a sedentary fate.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Defeatist catastrophizing prevents the very adaptation your body is capable of.",
+      },
+      {
+        id: "trg-27-c",
+        text: "Force myself to run for 90 minutes tomorrow until I vomit to prove I'm tough.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Punitive overtraining leads directly to muscle tears and prolonged injury.",
+      },
+      {
+        id: "trg-27-d",
+        text: "Fatigue is purely an illusion of the weak mind! I am an invincible Spartan warrior!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Macho denial of physiological fatigue leads to physical burnout.",
+      },
+    ],
+  },
+  {
+    id: "trg-28",
+    category: "health_body",
+    categoryLabel: "Health & Somatic Sensitivity",
+    title: "A Night of Tossing and Turning",
+    situation: "You struggle to fall asleep before 3 AM on a Sunday night because your mind is racing with the upcoming week's schedule.",
+    automaticThought: "\"My Monday will be a total catastrophe. I won't be able to string a coherent sentence together.\"",
+    distortion: "Fortune Telling",
+    clues: [
+      "Have you previously performed competently on days following poor sleep?",
+      "Does catastrophic worrying about sleep actually delay sleep onset further?",
+    ],
+    cbtRationale: "Predicting complete operational failure from one poor night of rest creates sleep anxiety (psychophysiological insomnia).",
+    options: [
+      {
+        id: "trg-28-a",
+        text: "Human bodies are remarkably resilient. Even with broken sleep, resting quietly still restores energy, and I have handled busy Mondays on low sleep before.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Classic CBT-I (Insomnia) gold standard! Relieving sleep pressure enables the nervous system to relax.",
+      },
+      {
+        id: "trg-28-b",
+        text: "I am developing chronic incurable insomnia. My cognitive faculties will permanently deteriorate.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Panic thinking triggers adrenaline, making sleep physiologically impossible.",
+      },
+      {
+        id: "trg-28-c",
+        text: "Drink three energy drinks first thing in the morning to artificially brute-force alertness.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Excessive stimulants create caffeine crashes and disrupt the subsequent night's sleep.",
+      },
+      {
+        id: "trg-28-d",
+        text: "Sleep is for the uninspired! Awake at 3 AM means you are chosen by destiny!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Grandiose rationalization neglects legitimate biological sleep needs.",
+      },
+    ],
+  },
+  {
+    id: "trg-29",
+    category: "health_body",
+    categoryLabel: "Health & Somatic Sensitivity",
+    title: "The Lingering Tension Headache",
+    situation: "You have had a dull, bilateral forehead ache for three consecutive afternoons while working on intense spreadsheet audits under fluorescent lights.",
+    automaticThought: "\"This isn't a normal headache. It's a progressive neurological disease and I should prepare for the worst.\"",
+    distortion: "Catastrophizing",
+    clues: [
+      "Are eye strain, screen glare, dehydration, and poor posture the overwhelming statistical causes of afternoon tension headaches?",
+      "Have you taken basic steps like screen breaks, ergonomic checks, and drinking water?",
+    ],
+    cbtRationale: "Equating common occupational eye-strain headaches to rare lethal conditions is severe Catastrophizing.",
+    options: [
+      {
+        id: "trg-29-a",
+        text: "Hours of screen focus and posture strain routinely cause tension headaches. Taking hourly eye breaks, drinking water, and adjusting monitor brightness is the logical first step.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Evidence-based and grounded! You address the most probable lifestyle cause first.",
+      },
+      {
+        id: "trg-29-b",
+        text: "Fall down a symptom-checker rabbit hole and diagnose yourself with incurable brain pathologies.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Cyberchondria amplifies psychosomatic muscle tension, worsening the headache.",
+      },
+      {
+        id: "trg-29-c",
+        text: "Take maximum-dose painkillers every 4 hours without addressing screen posture or hydration.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Medication overuse can trigger rebound headaches without solving ergonomic strain.",
+      },
+      {
+        id: "trg-29-d",
+        text: "Pain is just a social construct! If I chant positive affirmations, tension ceases to exist!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Bypassing bodily signals prevents proper ergonomic corrections.",
+      },
+    ],
+  },
+  {
+    id: "trg-30",
+    category: "health_body",
+    categoryLabel: "Health & Somatic Sensitivity",
+    title: "Feeling Sluggish During a Cold",
+    situation: "You catch a mild winter cold, feel lethargic, and have to spend the day resting on the sofa instead of crossing off your 10 to-do list items.",
+    automaticThought: "\"I am lazy and unproductive. I should be able to power through a silly cold if I had real grit.\"",
+    distortion: "Should Statements",
+    clues: [
+      "Does the immune system consume massive metabolic energy to produce antibodies and fight infection?",
+      "Is resting during acute illness laziness, or basic biological wisdom?",
+    ],
+    cbtRationale: "'Should statements' demand that biology bow down to arbitrary productivity expectations, generating unearned guilt.",
+    options: [
+      {
+        id: "trg-30-a",
+        text: "Resting is an active investment in healing. Giving my body a day to fight the virus accelerates recovery so I can return with full vitality later.",
+        archetype: "cognitive_reframe",
+        isBestReframe: true,
+        impactFeedback: "Self-compassionate and biologically sound! Healing requires cellular rest, not shame.",
+      },
+      {
+        id: "trg-30-b",
+        text: "I am useless unless I am actively generating economic output every waking second.",
+        archetype: "catastrophic_spiral",
+        isBestReframe: false,
+        impactFeedback: "Equating human value strictly to daily output causes chronic burnout.",
+      },
+      {
+        id: "trg-30-c",
+        text: "Force myself to go to the office and spread the cold to all my colleagues to prove I'm tough.",
+        archetype: "avoidant_suppression",
+        isBestReframe: false,
+        impactFeedback: "Presenteeism prolongs illness and endangers vulnerable peers.",
+      },
+      {
+        id: "trg-30-d",
+        text: "Colds are simply energy blockages from negative thoughts, so this is my moral failing!",
+        archetype: "toxic_positivity",
+        isBestReframe: false,
+        impactFeedback: "Moralizing physical viral transmission generates toxic self-blame.",
+      },
+    ],
+  },
+];

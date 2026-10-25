@@ -1,40 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Mail, Lock, AlertCircle, Sparkles, KeyRound, ArrowRight, Lightbulb } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
-import ThreeLampCanvas from "@/components/auth/ThreeLampCanvas";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import AuthShowcase from "@/components/auth/AuthShowcase";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user, isLoading, getDefaultDashboardRoute } = useAuth();
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [lampOn, setLampOn] = useState(false); // Starts dark until cord is pulled
+
+  // Auto-redirect if already logged in based on verified role
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(getDefaultDashboardRoute());
+    }
+  }, [user, isLoading, router, getDefaultDashboardRoute]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
+      const loggedUser = await login(email, password);
       toast.success("Welcome back to MindCare AI!");
-      router.push("/dashboard");
+      const roles = loggedUser.roles || (loggedUser.is_admin ? ["admin", "user"] : ["user"]);
+      if (roles.includes("owner")) {
+        router.push("/owner/system-settings");
+      } else if (roles.includes("admin") || loggedUser.is_admin) {
+        router.push("/admin/dashboard");
+      } else if (roles.includes("professional")) {
+        router.push("/professional/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       let errorMessage = "Invalid email or password.";
       if (err.response?.data?.detail) {
         if (typeof err.response.data.detail === "string") {
           errorMessage = err.response.data.detail;
+        } else if (Array.isArray(err.response.data.detail)) {
+          errorMessage = err.response.data.detail[0]?.msg || errorMessage;
         }
+      } else if (err.response?.status === 405) {
+        errorMessage = "Method Not Allowed — please ensure the FastAPI backend is running on http://localhost:8000.";
       } else if (err.message === "Network Error" || !err.response) {
-        errorMessage = "Cannot connect to the server. Please ensure the backend is running.";
+        errorMessage = "Cannot connect to the server. Please ensure the backend server is running on port 8000.";
       }
       setError(errorMessage);
       toast.error("Login failed.");
@@ -43,167 +75,180 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoFill = () => {
-    setEmail("rsumanth4377@gmail.com");
-    setPassword("password123");
-    toast.success("Demo credentials filled!");
-  };
-
   return (
-    <div className="min-h-screen bg-[#05060f] relative overflow-hidden flex flex-col items-center justify-center p-6">
-      
-      {/* ── AMBIENT BACKGROUND GLOW ────────────────────────────────────────── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full blur-[120px] transition-opacity duration-700 ${lampOn ? "bg-violet-900/20 opacity-100" : "opacity-0"}`} />
-        <div className={`absolute bottom-[-10%] right-[20%] w-[500px] h-[500px] rounded-full blur-[120px] transition-opacity duration-700 ${lampOn ? "bg-amber-600/15 opacity-100" : "opacity-0"}`} />
+    <div className="min-h-screen w-full bg-[#030712] text-white flex flex-col lg:grid lg:grid-cols-12 overflow-x-hidden">
+      {/* ── LEFT SHOWCASE HERO (Desktop lg:col-span-7) ─────────────────────── */}
+      <div className="hidden lg:flex lg:col-span-7 bg-slate-950/80 border-r border-slate-800/80 relative">
+        <AuthShowcase />
       </div>
 
-      {/* ── MAIN AUTH STAGE WITH THREE.JS 3D LAMP ───────────────────────── */}
-      <div className="relative max-w-md w-full flex flex-col items-center z-10">
+      {/* ── RIGHT AUTHENTICATION PORTAL (Mobile 100% / Desktop lg:col-span-5) ── */}
+      <div className="flex-1 lg:col-span-5 flex flex-col justify-between p-6 sm:p-10 lg:p-12 relative min-h-screen">
+        {/* Ambient lighting effects */}
+        <div className="absolute top-10 right-10 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 left-10 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Three.js WebGL 3D Lamp Canvas Component */}
-        <ThreeLampCanvas
-          focusedField={focusedField}
-          isPasswordFocused={focusedField === "password"}
-          hasError={!!error}
-          isOn={lampOn}
-          onToggleLight={(state) => setLampOn(state)}
-        />
+        {/* Top Navigation Row */}
+        <div className="relative z-10 flex items-center justify-between pb-6">
+          {/* Mobile Logo Only (Hidden on Desktop because it's in the showcase) */}
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <img
+              src="/logo.png"
+              alt="MindCare AI"
+              className="w-9 h-9 rounded-full object-cover shadow-md shadow-purple-500/20"
+            />
+            <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-purple-300 to-cyan-300 bg-clip-text text-transparent">
+              MindCare AI
+            </span>
+          </div>
 
-        {/* Floating Instruction Banner when Lamp is OFF */}
-        {!lampOn && (
-          <motion.button
-            onClick={() => setLampOn(true)}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: [0.7, 1, 0.7], y: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-            className="my-4 px-5 py-2.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer hover:bg-amber-500/20 transition-all"
-          >
-            <Lightbulb className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>Pull the lamp string above to reveal Login</span>
-          </motion.button>
-        )}
-
-        {/* Glassmorphic Auth Form Card — Appears ONLY when Lamp is ON */}
-        <AnimatePresence>
-          {lampOn && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: -20 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="w-full rounded-3xl p-8 backdrop-blur-xl border border-white/10 bg-slate-900/70 shadow-2xl shadow-amber-500/10 transition-all duration-300"
+          <div className="ml-auto text-xs text-slate-400">
+            Don't have an account?{" "}
+            <Link
+              href="/signup"
+              className="font-bold text-purple-400 hover:text-purple-300 underline underline-offset-4 transition-colors"
             >
-              {/* Header */}
-              <div className="text-center space-y-2 mb-6">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-amber-500 p-0.5 shadow-lg shadow-violet-500/20 mx-auto">
-                  <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                    <Heart className="w-7 h-7 text-amber-400 fill-amber-400/20" />
-                  </div>
-                </div>
-                <h1 className="text-2xl font-black text-white tracking-tight">Welcome Back</h1>
-                <p className="text-slate-400 text-xs">
-                  Log in to check-in on your mental wellness.
-                </p>
+              Sign Up
+            </Link>
+          </div>
+        </div>
+
+        {/* Main Auth Form Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-md mx-auto my-auto space-y-6"
+        >
+          {/* Card Header */}
+          <div className="space-y-2 text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Confidential Access</span>
+            </div>
+            <h1 className="text-3xl font-black text-white tracking-tight">
+              Welcome Back
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Sign in to continue your personalized mental wellness check-ins.
+            </p>
+          </div>
+
+          {/* Primary Action: Official Google Sign-In Button */}
+          <div className="space-y-3">
+            <GoogleSignInButton label="Continue with Google" />
+
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-800/80" />
               </div>
-
-              {/* Error Banner */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mb-6 bg-red-500/15 border border-red-500/30 p-3.5 rounded-2xl flex items-center gap-3 text-red-300 text-xs font-medium"
-                >
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <span>{error}</span>
-                </motion.div>
-              )}
-
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                
-                {/* Email Field */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Email Address</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onFocus={() => setFocusedField("email")}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="you@example.com"
-                      className="w-full px-4 py-3 rounded-2xl bg-slate-950/80 border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 transition-all placeholder:text-slate-600"
-                    />
-                  </div>
-                </div>
-
-                {/* Password Field */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-purple-400" />
-                      <span>Password</span>
-                    </label>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setFocusedField("password")}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-3 rounded-2xl bg-slate-950/80 border border-white/10 text-white text-xs font-medium focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 transition-all placeholder:text-slate-600"
-                    />
-                  </div>
-                </div>
-
-                {/* Quick Demo Pill */}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleDemoFill}
-                    className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors"
-                  >
-                    <KeyRound className="w-3 h-3" /> Fill Demo Login
-                  </button>
-                </div>
-
-                {/* Submit Button */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-violet-600 text-white font-bold text-xs shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 hover:shadow-amber-500/40 transition-all disabled:opacity-50"
-                >
-                  {loading ? (
-                    <span>Logging in...</span>
-                  ) : (
-                    <>
-                      <span>Log In to MindCare AI</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </motion.button>
-              </form>
-
-              {/* Footer Link */}
-              <div className="mt-6 pt-5 border-t border-white/5 text-center text-xs text-slate-400">
-                Don't have an account yet?{" "}
-                <Link href="/signup" className="text-amber-400 font-bold hover:underline">
-                  Create an Account
-                </Link>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-[#030712] px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Or continue with email
+                </span>
               </div>
+            </div>
+          </div>
+
+          {/* Error Banner */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-rose-500/15 border border-rose-500/30 p-3.5 rounded-2xl flex items-center gap-3 text-rose-300 text-xs font-medium"
+            >
+              <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+              <span>{error}</span>
             </motion.div>
           )}
-        </AnimatePresence>
+
+          {/* Credentials Form */}
+          <form onSubmit={handleSubmit} className="space-y-4 text-left">
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-purple-400" />
+                <span>Email Address</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-white text-xs font-medium focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all placeholder:text-slate-600 shadow-inner"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Password</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-4 pr-11 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-white text-xs font-medium focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all placeholder:text-slate-600 shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer pt-3"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Log In to MindCare AI</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
+          </form>
+        </motion.div>
+
+        {/* Footer Security Badges */}
+        <div className="relative z-10 pt-6 border-t border-slate-900 flex items-center justify-center gap-4 text-[11px] text-slate-500">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+            256-Bit SSL Protection
+          </span>
+          <span>•</span>
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            Zero Data Selling
+          </span>
+        </div>
       </div>
     </div>
   );

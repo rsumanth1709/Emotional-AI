@@ -7,6 +7,7 @@ import { dashboardAPI, memoryAPI } from "@/lib/axios";
 import type { DashboardData } from "@/types";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 import MoodCard from "@/components/dashboard/MoodCard";
 import EmotionPieChart from "@/components/dashboard/EmotionPieChart";
 import WeeklyChart from "@/components/dashboard/WeeklyChart";
@@ -80,11 +81,7 @@ export default function DashboardPage() {
   };
 
   if (authLoading || loading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Loading wellness metrics...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

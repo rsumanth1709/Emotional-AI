@@ -13,6 +13,7 @@ import {
   Brain, Moon, Droplets, Calendar, History, Check, X, Play,
   Zap, Award, BellOff, ArrowUpRight, BarChart2
 } from "lucide-react";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 const REMINDER_TYPES = [
   { key: "medication", label: "Medication & Vitamins (Non-Prescriptive)", icon: Pill, color: "from-rose-500 to-pink-500", textCol: "text-rose-400", bgCol: "bg-rose-500/10 border-rose-500/20" },
@@ -298,12 +299,7 @@ export default function RemindersPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-violet-400 mr-3" />
-        Loading Smart Reminder System…
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

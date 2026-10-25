@@ -17,6 +17,8 @@ const NODE_TYPE_CONFIG: Record<string, { bg: string; border: string; text: strin
   "Trigger":         { bg: "bg-red-950/60",     border: "border-red-500/40",    text: "text-red-300",    badge: "bg-red-500/20 text-red-300 border-red-500/30" },
   "Emotion":         { bg: "bg-pink-950/60",    border: "border-pink-500/40",   text: "text-pink-300",   badge: "bg-pink-500/20 text-pink-300 border-pink-500/30" },
   "Coping Strategy": { bg: "bg-blue-950/60",    border: "border-blue-500/40",   text: "text-blue-300",   badge: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
+  "Habit":           { bg: "bg-cyan-950/60",    border: "border-cyan-500/40",   text: "text-cyan-300",   badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" },
+  "Recommendation":  { bg: "bg-purple-950/60",  border: "border-purple-500/40", text: "text-purple-300", badge: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
   "Outcome":         { bg: "bg-emerald-950/60", border: "border-emerald-500/40",text: "text-emerald-300",badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" },
   "Progress":        { bg: "bg-amber-950/60",   border: "border-amber-500/40",  text: "text-amber-300",  badge: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
 };
@@ -38,8 +40,8 @@ const EMOTION_NODES = [
 type NodePosition = { id: string; x: number; y: number; node: GraphNode };
 
 function computeLayout(nodes: GraphNode[], edges: GraphEdge[], width: number, height: number): NodePosition[] {
-  // Column-based layout: Trigger → Emotion → Coping Strategy → Outcome → Progress
-  const typeOrder = ["Trigger", "Emotion", "Coping Strategy", "Outcome", "Progress"];
+  // Column-based layout: Trigger → Emotion → Coping Strategy → Habit → Recommendation → Outcome → Progress
+  const typeOrder = ["Trigger", "Emotion", "Coping Strategy", "Habit", "Recommendation", "Outcome", "Progress"];
   const cols: Record<string, GraphNode[]> = {};
   typeOrder.forEach(t => cols[t] = []);
   nodes.forEach(n => {

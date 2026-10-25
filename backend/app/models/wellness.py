@@ -1,57 +1,81 @@
 """
-MindCare AI — Daily Wellness Coach DB Models
+MindCare AI — Daily Wellness & Personalized Wellness Generator ORM Models
+Stores daily goals, logs, user badge achievements, and personalized wellness content records.
 """
 import uuid
-from datetime import date, datetime
-from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, Integer, String, Text, Boolean
+from datetime import datetime, date
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Boolean, JSON, Text, Date
 from sqlalchemy.orm import relationship
+
 from app.database import Base
 
+
 class DailyWellnessGoal(Base):
-    """Daily goals/targets for water, sleep, exercise, and meditation."""
+    """Stores user daily target goals for wellness tracking."""
     __tablename__ = "daily_wellness_goals"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
-    water_target_ml = Column(Integer, default=2000)
-    sleep_target_hours = Column(Float, default=8.0)
-    exercise_target_mins = Column(Integer, default=30)
-    meditation_target_mins = Column(Integer, default=10)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    mindfulness_minutes_target = Column(Integer, default=10)
+    journal_entries_target = Column(Integer, default=1)
+    water_intake_ml_target = Column(Integer, default=2000)
+    sleep_hours_target = Column(Float, default=8.0)
+    mood_checkins_target = Column(Integer, default=2)
+    created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    user = relationship("User", back_populates="wellness_goals")
+
+    user = relationship("User")
 
 
 class DailyWellnessLog(Base):
-    """Daily logs for water intake, sleep, exercise, and gratitude journaling."""
+    """Daily log tracking user actual progress against daily goals."""
     __tablename__ = "daily_wellness_logs"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    date = Column(Date, default=date.today, index=True)
+    log_date = Column(Date, default=date.today, index=True)
+    mindfulness_minutes = Column(Integer, default=0)
+    journal_entries = Column(Integer, default=0)
     water_intake_ml = Column(Integer, default=0)
     sleep_hours = Column(Float, default=0.0)
-    sleep_quality = Column(String, nullable=True) # "Good", "Fair", "Poor"
-    exercise_mins = Column(Integer, default=0)
-    exercise_type = Column(String, nullable=True)
-    meditation_mins = Column(Integer, default=0)
-    gratitude_1 = Column(Text, nullable=True)
-    gratitude_2 = Column(Text, nullable=True)
-    gratitude_3 = Column(Text, nullable=True)
+    mood_checkins = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    user = relationship("User", back_populates="wellness_logs")
+
+    user = relationship("User")
 
 
 class UserBadge(Base):
-    """Gamified achievement badges unlocked by users."""
+    """Badges awarded to users for achieving wellness milestones."""
     __tablename__ = "user_badges"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    badge_name = Column(String, nullable=False) # e.g. "Hydration Hero"
-    badge_type = Column(String, nullable=False) # e.g. "water", "streak", "meditation"
-    unlocked_at = Column(DateTime, default=datetime.utcnow)
-    
-    user = relationship("User", back_populates="badges")
+    badge_name = Column(String, nullable=False)
+    badge_type = Column(String, nullable=False)
+    description = Column(String, default="", nullable=True)
+    icon_name = Column(String, default="Award")
+    awarded_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class WellnessContentRecord(Base):
+    """Main stored record for generated personalized wellness content."""
+    __tablename__ = "wellness_content_records"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    content_type = Column(String, nullable=False)        # affirmation, breathing, mindfulness, journal_prompt, daily_plan
+    title = Column(String, nullable=False)
+    content_data = Column(JSON, nullable=False)          # Full structured JSON schema
+    duration_minutes = Column(Integer, default=1)
+    emotion_context = Column(String, default="neutral")
+    confidence = Column(Float, default=0.75)
+    status = Column(String, default="generated")          # generated, started, completed, saved, skipped
+    helpful = Column(Boolean, nullable=True)             # True = Helpful, False = Not Helpful
+    feedback_notes = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")

@@ -39,6 +39,12 @@
     "valid": 6318,
     "test": 5701
   },
-  "dair_emotion": {},
-  "mental_health_qa": {}
+  "dair_emotion": {
+    "train": 16000,
+    "validation": 2000,
+    "test": 2000
+  },
+  "mental_health_qa": {
+    "total_records": 3512
+  }
 }

@@ -66,7 +66,12 @@ class LSTMForecaster:
     def __init__(self):
         self.model = None
         self.rmse_mood = 1.2
-        self._load_model()
+        self._loaded = False
+
+    def _ensure_loaded(self):
+        if not self._loaded:
+            self._loaded = True
+            self._load_model()
 
     def _load_model(self):
         if not HAS_TORCH:
@@ -102,6 +107,7 @@ class LSTMForecaster:
         Run sequence inference over historical user days.
         Returns tomorrow's prediction, stress probability, 7-day weekly trend, and 95% confidence intervals.
         """
+        self._ensure_loaded()
         seq_len = 14
         input_matrix = self._build_feature_sequence(history_records, required_len=seq_len)
 

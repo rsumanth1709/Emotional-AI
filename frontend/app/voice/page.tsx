@@ -13,6 +13,7 @@ import {
   ChevronDown, Globe, Zap, Brain, Shield, Flame,
   Trophy, GraduationCap,
 } from "lucide-react";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 
 const PERSONAS = [
   { key: "friendly", label: "Friendly", emoji: "😊", icon: Sparkles, color: "from-violet-500 to-fuchsia-500" },
@@ -166,13 +167,7 @@ export default function VoiceAssistantPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-[#05060f] flex items-center justify-center">
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-          <Sparkles className="w-8 h-8 text-violet-400" />
-        </motion.div>
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

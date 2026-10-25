@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
+import MindCareLoading from "@/components/ui/MindCareLoading";
+
 export default function JournalPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -202,12 +204,7 @@ export default function JournalPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-violet-400 mr-3" />
-        Opening therapeutic journal...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   // Calculate quick streak count from entries

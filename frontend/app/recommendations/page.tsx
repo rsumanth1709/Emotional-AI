@@ -36,6 +36,8 @@ const MOOD_EFFECT_OPTIONS = [
   { key: "energize", label: "Energize & Empower" },
 ];
 
+import MindCareLoading from "@/components/ui/MindCareLoading";
+
 export default function RecommendationsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -200,11 +202,7 @@ export default function RecommendationsPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Loading AI recommendation engine...
-      </div>
-    );
+    return <MindCareLoading message="Merging Emotional Empathy & AI Intelligence..." />;
   }
 
   return (

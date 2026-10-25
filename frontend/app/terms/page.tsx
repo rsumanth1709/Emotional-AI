@@ -1,0 +1,192 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft, ShieldCheck, Scale, AlertTriangle, FileText, CheckCircle2, HeartHandshake } from "lucide-react";
+
+export default function TermsPage() {
+  return (
+    <div className="min-h-screen bg-[#030712] text-white selection:bg-purple-500 selection:text-white">
+      {/* Top Navigation Bar */}
+      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link
+            href="/signup"
+            className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Sign Up</span>
+          </Link>
+
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="MindCare AI Logo"
+              className="w-8 h-8 rounded-full object-cover shadow-sm shadow-purple-500/20"
+            />
+            <span className="font-extrabold text-sm tracking-tight bg-gradient-to-r from-purple-300 to-cyan-300 bg-clip-text text-transparent">
+              MindCare AI
+            </span>
+          </div>
+
+          <Link
+            href="/privacy"
+            className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            Privacy Policy →
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Document Content */}
+      <main className="max-w-4xl mx-auto px-6 py-12 space-y-10">
+        {/* Document Header */}
+        <div className="border-b border-slate-800 pb-8 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+            <Scale className="w-3.5 h-3.5 text-purple-400" />
+            <span>Legal Agreement</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            Terms & Conditions
+          </h1>
+          <p className="text-slate-400 text-sm">
+            Last Updated: October 6, 2026 • Effective Immediately upon account creation
+          </p>
+        </div>
+
+        {/* Critical Non-Diagnostic Health Disclaimer Notice */}
+        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs sm:text-sm space-y-2">
+          <div className="flex items-center gap-2 font-bold text-amber-400">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <span>Important Medical & Emergency Disclaimer</span>
+          </div>
+          <p className="leading-relaxed text-amber-200/90">
+            <strong>MindCare AI is an artificial intelligence wellness companion and is not a healthcare provider.</strong> Our service does not provide clinical diagnoses, psychiatric medical care, or crisis intervention. If you are experiencing thoughts of self-harm, suicide, or a psychiatric medical emergency, please call <strong>988 (USA Suicide & Crisis Lifeline)</strong>, call <strong>911 / 112</strong>, or immediately contact a licensed healthcare professional.
+          </p>
+        </div>
+
+        {/* Section Blocks */}
+        <div className="space-y-8 text-sm text-slate-300 leading-relaxed">
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">1.</span> Acceptance of Terms
+            </h2>
+            <p>
+              By accessing or creating an account with MindCare AI ("we", "our", or "the Platform"), you agree to be bound by these Terms and Conditions ("Terms") and our Privacy Policy. If you do not agree to all provisions of these Terms, you must not access or use the Platform.
+            </p>
+            <p>
+              You affirm that you are at least 18 years of age (or the legal age of majority in your jurisdiction) or have obtained authorized parental or guardian consent to use this service.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">2.</span> Scope and Purpose of the Service
+            </h2>
+            <p>
+              MindCare AI provides emotional wellness support, stress tracking, cognitive journaling, habit coaching, and multimodal emotion AI reflection.
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 pl-2 text-slate-400">
+              <li>The service is designed exclusively for self-reflection, stress relief, and emotional awareness.</li>
+              <li>MindCare AI outputs are generated by machine learning algorithms and should never replace qualified professional advice from medical doctors, psychiatrists, or licensed therapists.</li>
+              <li>We make no guarantees regarding therapeutic outcomes or behavioral cures.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">3.</span> User Accounts & Confidentiality
+            </h2>
+            <p>
+              When registering an account, you must provide accurate and verifiable information (or authenticate via authorized Google OAuth). You are solely responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account.
+            </p>
+            <p>
+              You agree to notify us immediately if you suspect unauthorized access to your account or any breach of security.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">4.</span> Multimodal AI Input (Voice & Facial Analysis)
+            </h2>
+            <p>
+              Optional features such as vocal prosody analysis and facial micro-expression analysis process local biometric cues strictly for emotional tone estimation.
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 pl-2 text-slate-400">
+              <li>Raw video feeds and raw audio are processed in transient memory and are never sold or retained for biometric surveillance.</li>
+              <li>You may disable camera or microphone permissions at any time through your browser settings without restricting core chat functionality.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">5.</span> Prohibited Uses
+            </h2>
+            <p>
+              You agree not to misuse MindCare AI or assist any third party in:
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 pl-2 text-slate-400">
+              <li>Attempting to reverse-engineer, decompile, or extract the model weights or proprietary algorithms.</li>
+              <li>Submitting abusive, illegal, violent, defamatory, or harmful content.</li>
+              <li>Attempting to bypass safety filters, prompt injections, or red-teaming security layers.</li>
+              <li>Using the platform for any emergency, high-risk triage, or life-support clinical decision making.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">6.</span> Intellectual Property & Data Ownership
+            </h2>
+            <p>
+              You retain full ownership of your personal notes, journals, and reflections created on the platform. MindCare AI grants you a personal, non-exclusive, non-transferable license to use the application for non-commercial personal wellness purposes.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">7.</span> Account Termination & Deletion
+            </h2>
+            <p>
+              You may terminate your account at any time through your Profile Settings or by requesting complete data erasure. Upon account deletion, all associated chats, journal entries, and emotion telemetry are permanently purged from active databases in accordance with our Privacy Policy.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">8.</span> Limitation of Liability
+            </h2>
+            <p>
+              To the maximum extent permitted by applicable law, MindCare AI and its contributors shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your access to, use of, or inability to use the service.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-purple-400">9.</span> Contact & Inquiries
+            </h2>
+            <p>
+              If you have any questions or concerns regarding these Terms, please contact our team at:{" "}
+              <a href="mailto:support@mindcare.ai" className="text-purple-400 underline font-semibold">
+                support@mindcare.ai
+              </a>
+            </p>
+          </section>
+        </div>
+
+        {/* Footer Accept CTA */}
+        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>End-to-End Encrypted & HIPAA-Aligned Agreement</span>
+          </div>
+
+          <Link
+            href="/signup"
+            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/30"
+          >
+            I Understand & Agree — Return to Sign Up
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
+}

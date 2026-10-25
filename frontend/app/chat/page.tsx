@@ -4,86 +4,61 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
-import api, { chatAPI } from "@/lib/axios";
+import { chatAPI } from "@/lib/axios";
 import type { SessionSummary } from "@/types";
 import Sidebar from "@/components/layout/Sidebar";
-import Navbar from "@/components/layout/Navbar";
 import ChatBubble from "@/components/chat/ChatBubble";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import ChatInput from "@/components/chat/ChatInput";
 import CrisisModal from "@/components/chat/CrisisModal";
+import MindCareLoading from "@/components/ui/MindCareLoading";
 import {
-  MessageSquare, Plus, Trash2, Camera, Mic, Video, X, Sparkles,
-  Heart, Brain, ShieldAlert, Download, RefreshCw, Activity,
-  UserCheck, Compass, GraduationCap, Flame, Feather, ChevronRight,
-  PanelLeftClose, PanelLeft, Search, CheckCircle2, MessageCircle,
-  Share2, Copy, Link as LinkIcon, Smartphone, FileText, Check
+  MessageSquare, Plus, Trash2, Camera, Sparkles,
+  ShieldAlert, Download, Share2, Copy, Link as LinkIcon,
+  FileText, Check, PanelLeftClose, PanelLeft, Search, X,
+  ExternalLink, Heart, Compass, Moon, Smile, RefreshCw
 } from "lucide-react";
-import { getEmotionEmoji } from "@/lib/utils";
+import { getEmotionEmoji, getEmotionColor, getEmotionBgColor, formatTime } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
-const PERSONA_METADATA: Record<string, { name: string; tag: string; icon: any; gradient: string; textCol: string; borderCol: string; bgCol: string }> = {
-  friendly: {
-    name: "Friendly Companion",
-    tag: "Warm & Empathetic",
-    icon: Heart,
-    gradient: "from-pink-500 via-rose-500 to-amber-500",
-    textCol: "text-rose-400",
-    borderCol: "border-rose-500/40",
-    bgCol: "bg-rose-500/10",
-  },
-  professional: {
-    name: "Clinical Therapist",
-    tag: "CBT & Evidence-Based",
-    icon: Brain,
-    gradient: "from-violet-500 via-indigo-500 to-purple-600",
-    textCol: "text-violet-400",
-    borderCol: "border-violet-500/40",
-    bgCol: "bg-violet-500/10",
-  },
-  motivational: {
-    name: "Motivation Catalyst",
-    tag: "Energetic & Goal-Driven",
-    icon: Flame,
-    gradient: "from-amber-500 via-orange-500 to-red-500",
-    textCol: "text-amber-400",
-    borderCol: "border-amber-500/40",
-    bgCol: "bg-amber-500/10",
-  },
-  coach: {
-    name: "Wellness Coach",
-    tag: "Practical Health Plans",
-    icon: Activity,
-    gradient: "from-emerald-500 via-teal-500 to-cyan-500",
-    textCol: "text-emerald-400",
-    borderCol: "border-emerald-500/40",
-    bgCol: "bg-emerald-500/10",
-  },
-  mentor: {
-    name: "Wise Mentor",
-    tag: "Patient & Reflective",
-    icon: Feather,
-    gradient: "from-cyan-500 via-blue-500 to-indigo-500",
-    textCol: "text-cyan-400",
-    borderCol: "border-cyan-500/40",
-    bgCol: "bg-cyan-500/10",
-  },
-  student_counselor: {
-    name: "Student Counselor",
-    tag: "Academic & Stress Guide",
-    icon: GraduationCap,
-    gradient: "from-blue-500 via-purple-500 to-pink-500",
-    textCol: "text-blue-400",
-    borderCol: "border-blue-500/40",
-    bgCol: "bg-blue-500/10",
-  },
-};
-
 const STARTER_PROMPTS = [
-  { text: "I'm feeling overwhelmed by work stress and burnout...", icon: "😰" },
-  { text: "Can you guide me through a 5-minute grounding box breathing exercise?", icon: "🫁" },
-  { text: "I've been having trouble sleeping due to anxious thoughts...", icon: "🌙" },
-  { text: "Let's do a quick gratitude reflection to boost my mood.", icon: "✨" },
+  {
+    title: "Manage Burnout & Stress",
+    text: "I'm feeling overwhelmed by work pressure and burnout. Help me decompress and regain balance.",
+    icon: "😰",
+    category: "Stress Relief",
+    gradient: "from-amber-500/10 to-orange-500/5 border-amber-500/20 hover:border-amber-500/40"
+  },
+  {
+    title: "5-Minute Box Breathing",
+    text: "Can you guide me step-by-step through a calming box breathing exercise?",
+    icon: "🫁",
+    category: "Mindfulness",
+    gradient: "from-cyan-500/10 to-blue-500/5 border-cyan-500/20 hover:border-cyan-500/40"
+  },
+  {
+    title: "Bedtime Anxiety & Sleep",
+    text: "I'm having trouble sleeping because of racing thoughts. What are soothing techniques for tonight?",
+    icon: "🌙",
+    category: "Sleep & Calm",
+    gradient: "from-indigo-500/10 to-purple-500/5 border-indigo-500/20 hover:border-indigo-500/40"
+  },
+  {
+    title: "Analyze My Document or Journal",
+    text: "I'd like to share my thoughts or a document for you to review and offer emotional insights on.",
+    icon: "📎",
+    category: "Multimodal AI",
+    gradient: "from-purple-500/10 to-pink-500/5 border-purple-500/20 hover:border-purple-500/40"
+  },
+];
+
+const QUICK_MOOD_CHECKINS = [
+  { emoji: "🌿", label: "Calm & Centered", prompt: "I'm feeling calm and reflective today. Let's do a quick mindful check-in." },
+  { emoji: "😰", label: "Stressed / Overwhelmed", prompt: "I'm feeling really stressed and overwhelmed right now. Can we talk through it?" },
+  { emoji: "⚡", label: "Anxious Thoughts", prompt: "I'm dealing with anxious thoughts today. Can you guide me through a grounding technique?" },
+  { emoji: "😔", label: "Low Energy / Down", prompt: "I'm feeling a bit low and unmotivated today. Could use some gentle encouragement." },
+  { emoji: "🌟", label: "Inspired & Hopeful", prompt: "I'm feeling positive and inspired today! Let's channel this into healthy habits." },
 ];
 
 export default function ChatPage() {
@@ -103,19 +78,18 @@ export default function ChatPage() {
     loadHistory,
     clearSession,
     setIsCrisis,
-    activePersona,
-    setActivePersona,
     setMessages,
   } = useChat();
 
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionSearch, setSessionSearch] = useState("");
   const [showSessionsPanel, setShowSessionsPanel] = useState(true);
-  const [personasList, setPersonasList] = useState<Record<string, { name: string; description: string; greeting: string }>>({});
 
-  // Multimodal states
+  // Multimodal & File states
   const [capturedImage, setCapturedImage] = useState<Blob | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedFileName, setAttachedFileName] = useState<string | null>(null);
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [showWebcam, setShowWebcam] = useState(false);
@@ -124,87 +98,81 @@ export default function ChatPage() {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const fetchPersonas = async () => {
-      try {
-        const res = await api.get("/chat/personas");
-        setPersonasList(res.data);
-      } catch {
-        setPersonasList({
-          friendly: { name: "Friendly Companion", description: "Warm, gentle friend.", greeting: "Hey there! I'm here for you. 😊 How are you feeling today?" },
-          professional: { name: "Clinical Therapist", description: "Structured, CBT-focused.", greeting: "Welcome to your supportive session. Processing thoughts today?" },
-          motivational: { name: "Motivation Catalyst", description: "Energetic and uplifting.", greeting: "Let's do this! 🚀 What is one positive goal right now?" },
-          coach: { name: "Wellness Coach", description: "Practical and goal-oriented.", greeting: "Hello! Let's build a healthy plan today. 📋" },
-          mentor: { name: "Wise Mentor", description: "Reflective and patient.", greeting: "Greetings. Let us sit quietly with your thoughts for a moment. 🌿" },
-          student_counselor: { name: "Student Counselor", description: "Relatable academic guide.", greeting: "Hey! College/school stress can be a lot. 🎓" }
-        });
-      }
-    };
-    fetchPersonas();
-  }, []);
-
-  const handlePersonaChange = (personaKey: string) => {
-    setActivePersona(personaKey);
-    const meta = PERSONA_METADATA[personaKey] || PERSONA_METADATA.friendly;
-    toast.success(`Switched to ${meta.name}`, { icon: "🤖" });
-    if (messages.length <= 1) {
-      const targetGreeting = personasList[personaKey]?.greeting || "Hello! I am here to support you.";
-      setMessages([
-        {
-          id: "initial-greeting",
-          role: "assistant",
-          content: targetGreeting,
-          persona: personaKey,
-          created_at: new Date().toISOString(),
-        }
-      ]);
-    }
-  };
-
   const handleNewSession = () => {
     clearSession();
-    const targetGreeting = personasList[activePersona]?.greeting || "Hello! I am here to support you.";
     setMessages([
       {
         id: "initial-greeting",
         role: "assistant",
-        content: targetGreeting,
-        persona: activePersona,
+        content: "Hello! I am MindCare AI. Express your thoughts, feelings, or concerns freely — I adapt dynamically to your input.",
         created_at: new Date().toISOString(),
       }
     ]);
-    toast.success("Started a new conversation session!", { icon: "✨" });
+    toast.success("Started a new chat session", { icon: "✨" });
   };
 
   useEffect(() => {
-    if (messages.length === 0 && Object.keys(personasList).length > 0) {
-      const greeting = personasList[activePersona]?.greeting || "Hello! I am here to support you.";
+    if (messages.length === 0) {
       setMessages([
         {
           id: "initial-greeting",
           role: "assistant",
-          content: greeting,
-          persona: activePersona,
+          content: "Hello! I am MindCare AI. Express your thoughts, feelings, or concerns freely — I adapt dynamically to your input.",
           created_at: new Date().toISOString(),
         }
       ]);
     }
-  }, [messages, personasList, activePersona, setMessages]);
+  }, [messages, setMessages]);
 
   const startWebcam = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
-      setMediaStream(stream);
-      setShowWebcam(true);
-      setTimeout(() => {
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      }, 100);
+      if (navigator?.mediaDevices?.getUserMedia) {
+        let stream: MediaStream | null = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        } catch {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch {
+            stream = null;
+          }
+        }
+        if (stream) {
+          setMediaStream(stream);
+          setShowWebcam(true);
+          setTimeout(() => {
+            if (videoRef.current) videoRef.current.srcObject = stream;
+          }, 150);
+          return;
+        }
+      }
     } catch {
-      toast.error("Could not access webcam camera.");
+      // Fallback silently if camera access fails
     }
+    // Directly open native file picker if camera stream fails
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachedFile(file);
+      setAttachedFileName(file.name);
+      if (file.type.startsWith("image/")) {
+        setCapturedImage(file);
+        setImagePreview(URL.createObjectURL(file));
+      } else {
+        setCapturedImage(null);
+        setImagePreview(null);
+      }
+      stopWebcam();
+      toast.success(`Attached: ${file.name}`, { icon: "📎" });
+    }
+    e.target.value = "";
   };
 
   const captureSnapshot = () => {
@@ -255,7 +223,7 @@ export default function ChatPage() {
       setMediaRecorder(recorder);
       setIsRecording(true);
     } catch {
-      toast.error("Could not access microphone.");
+      toast.error("Could not access microphone");
     }
   };
 
@@ -267,8 +235,21 @@ export default function ChatPage() {
   };
 
   const handleSend = async (text: string) => {
-    if (capturedImage || recordedAudio) {
-      await sendMultimodalMessage(text, recordedAudio, capturedImage);
+    if (attachedFile || capturedImage || recordedAudio) {
+      if (attachedFile) {
+        toast(`Analyzing file "${attachedFile.name}"...`, { icon: "📄" });
+      } else {
+        toast("Analyzing facial expression & voice tone...", { icon: "🧠" });
+      }
+      await sendMultimodalMessage(
+        text,
+        recordedAudio,
+        capturedImage,
+        attachedFile,
+        attachedFileName || undefined
+      );
+      setAttachedFile(null);
+      setAttachedFileName(null);
       setCapturedImage(null);
       setImagePreview(null);
       setRecordedAudio(null);
@@ -293,7 +274,7 @@ export default function ChatPage() {
     const userDisplayName = anonymizeShare ? "Anonymous User" : user?.full_name || user?.username || "User";
     return messages
       .map((m) => {
-        const sender = m.role === "assistant" ? `MindCare AI (${m.persona || activePersona})` : userDisplayName;
+        const sender = m.role === "assistant" ? "MindCare AI" : userDisplayName;
         return `[${new Date(m.created_at).toLocaleTimeString()}] ${sender}:\n${m.content}`;
       })
       .join("\n\n---\n\n");
@@ -303,7 +284,7 @@ export default function ChatPage() {
     const shareUrl = getShareableUrl();
     navigator.clipboard.writeText(shareUrl);
     setCopiedLink(true);
-    toast.success("Session link copied to clipboard!", { icon: "🔗" });
+    toast.success("Session link copied!", { icon: "🔗" });
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
@@ -311,25 +292,8 @@ export default function ChatPage() {
     const transcript = getFormattedTranscript();
     navigator.clipboard.writeText(transcript);
     setCopiedTranscript(true);
-    toast.success("Formatted transcript copied to clipboard!", { icon: "📋" });
+    toast.success("Transcript copied!", { icon: "📋" });
     setTimeout(() => setCopiedTranscript(false), 2500);
-  };
-
-  const handleNativeShare = async () => {
-    const shareUrl = getShareableUrl();
-    const title = `MindCare AI Session (${activePersona})`;
-    const text = `Check out my mental wellness check-in with MindCare AI!`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text, url: shareUrl });
-        toast.success("Shared successfully!");
-      } catch {
-        // Share cancelled
-      }
-    } else {
-      handleCopyLink();
-    }
   };
 
   const handleExportChat = () => {
@@ -342,7 +306,7 @@ export default function ChatPage() {
     a.download = `MindCare_Chat_Export_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Conversation exported as text log!", { icon: "📥" });
+    toast.success("Conversation exported!", { icon: "📥" });
   };
 
   useEffect(() => {
@@ -356,7 +320,7 @@ export default function ChatPage() {
       const res = await chatAPI.getSessions();
       setSessions(res.data);
     } catch {
-      // Handle error
+      // Ignore error
     }
   };
 
@@ -388,103 +352,140 @@ export default function ChatPage() {
     s.last_message ? s.last_message.toLowerCase().includes(sessionSearch.toLowerCase()) : true
   );
 
-  const activeMeta = PERSONA_METADATA[activePersona] || PERSONA_METADATA.friendly;
-  const ActiveIcon = activeMeta.icon;
-
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-violet-400 mr-3" />
-        Starting MindCare Conversational Intelligence Engine...
-      </div>
-    );
+    return <MindCareLoading message="Connecting to MindCare Emotional AI..." />;
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-950">
+    <div className="h-screen w-screen overflow-hidden flex bg-slate-950 text-slate-100 font-sans relative">
+      {/* Ambient Radial Atmospheric Glow */}
+      <div className="absolute top-0 left-1/3 w-[600px] h-[300px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[250px] bg-cyan-600/8 rounded-full blur-[140px] pointer-events-none" />
+
+      {/* Main App Sidebar */}
       <Sidebar />
 
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <Navbar title="Empathetic Support Chat" />
-
-        {/* Emotion & Session Intelligence Header Bar */}
-        <div className="bg-slate-900/80 border-b border-violet-500/20 py-2.5 px-4 md:px-8 flex flex-wrap items-center justify-between gap-3 backdrop-blur-md z-10">
+      {/* Main Chat Workspace */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 min-h-0 overflow-hidden relative z-10">
+        {/* Sleek Modern Glass Header */}
+        <header className="h-16 border-b border-slate-800/80 px-4 md:px-6 flex items-center justify-between bg-slate-950/80 backdrop-blur-2xl z-20 shrink-0 select-none">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowSessionsPanel((p) => !p)}
-              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-colors hidden md:flex items-center gap-1.5 text-xs font-semibold"
-              title="Toggle History Sidebar"
+              className="p-2 rounded-xl hover:bg-slate-900 border border-transparent hover:border-slate-800 text-slate-400 hover:text-white transition-all flex items-center justify-center"
+              title={showSessionsPanel ? "Collapse Recent Chats" : "Open Recent Chats"}
             >
-              {showSessionsPanel ? <PanelLeftClose className="w-4 h-4 text-violet-400" /> : <PanelLeft className="w-4 h-4 text-violet-400" />}
-              <span>History</span>
+              {showSessionsPanel ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
             </button>
 
+            {/* Model & Adaptability Badge */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+              </span>
+              <span className="text-xs font-bold text-slate-200">MindCare Emotion Engine</span>
+              <span className="text-[10px] text-purple-300 font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-purple-500/20">
+                v2.0
+              </span>
+            </div>
+
+            {/* Live Detected Emotion Indicator */}
             {currentEmotion && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300 font-semibold shadow-sm">
-                <span className="text-sm animate-pulse">{getEmotionEmoji(currentEmotion)}</span>
-                <span>Detected Emotion:</span>
-                <span className="capitalize text-white font-bold">{currentEmotion}</span>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-sm ${getEmotionBgColor(
+                  currentEmotion
+                )}`}
+              >
+                <span>{getEmotionEmoji(currentEmotion)}</span>
+                <span className="text-slate-300">Tone Estimate:</span>
+                <strong className={`capitalize ${getEmotionColor(currentEmotion)}`}>{currentEmotion}</strong>
+              </motion.div>
             )}
           </div>
 
+          {/* Header Action Buttons */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowShareModal(true)}
               disabled={messages.length === 0}
-              className="px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
-              title="Share Conversation Session"
+              className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 text-slate-400 hover:text-white transition-all disabled:opacity-40"
+              title="Share Session"
             >
-              <Share2 className="w-3.5 h-3.5 text-violet-400" />
-              <span>Share</span>
+              <Share2 className="w-4 h-4" />
             </button>
 
             <button
               onClick={handleExportChat}
               disabled={messages.length === 0}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
-              title="Export Conversation Log"
+              className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 text-slate-400 hover:text-white transition-all disabled:opacity-40"
+              title="Export Conversation"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Export Log</span>
+              <Download className="w-4 h-4" />
             </button>
 
             <button
               onClick={handleNewSession}
-              className="btn-primary py-1.5 px-3.5 text-xs font-semibold flex items-center gap-1.5"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-xs font-bold text-white transition-all shadow-md shadow-purple-600/25 active:scale-95"
+              title="Start a fresh chat"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New Session</span>
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">New Chat</span>
             </button>
           </div>
-        </div>
+        </header>
 
-        <div className="flex-1 flex overflow-hidden relative">
-          {/* Chat Sessions History Sidebar Panel */}
-          {showSessionsPanel && (
-            <div className="w-80 bg-slate-900/60 border-r border-slate-800 flex flex-col justify-between overflow-y-auto backdrop-blur-md flex-shrink-0 transition-all duration-300">
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1.5">
-                    <MessageCircle className="w-3.5 h-3.5 text-violet-400" /> Chat Sessions ({sessions.length})
+        {/* Content Body: Sidebar Drawer + Chat Stream */}
+        <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden relative">
+          {/* History Sessions Drawer */}
+          <AnimatePresence>
+            {showSessionsPanel && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 288, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: "easeInOut" }}
+                className="h-full bg-slate-950/95 border-r border-slate-800/80 flex flex-col justify-between shrink-0 overflow-hidden z-10 p-3 space-y-3 backdrop-blur-xl"
+              >
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Recent Check-ins</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-full font-bold">
+                    {sessions.length}
                   </span>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
                   <input
                     type="text"
                     value={sessionSearch}
                     onChange={(e) => setSessionSearch(e.target.value)}
-                    placeholder="Search past conversations..."
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50"
+                    placeholder="Search recent check-ins..."
+                    className="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-8 pr-7 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all"
                   />
+                  {sessionSearch && (
+                    <button
+                      onClick={() => setSessionSearch("")}
+                      className="absolute right-2.5 top-2.5 text-slate-500 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
                   {filteredSessions.length === 0 ? (
-                    <p className="text-xs text-slate-500 p-2 text-center">No matching check-ins found.</p>
+                    <div className="py-8 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 mx-auto flex items-center justify-center text-slate-600">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <p className="text-xs text-slate-500">No check-ins found.</p>
+                    </div>
                   ) : (
                     filteredSessions.map((sess) => {
                       const isAct = sessionId === sess.session_id;
@@ -492,25 +493,26 @@ export default function ChatPage() {
                         <div
                           key={sess.session_id}
                           onClick={() => loadHistory(sess.session_id)}
-                          className={`group flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all border ${
+                          className={`group flex items-center justify-between px-3 py-2.5 rounded-2xl cursor-pointer transition-all ${
                             isAct
-                              ? "bg-violet-950/40 border-violet-500/40 text-white shadow-lg shadow-violet-500/5"
-                              : "bg-slate-950/40 border-slate-800/80 hover:bg-slate-800/60 hover:border-slate-700 text-slate-300"
+                              ? "bg-slate-900 text-white font-bold border border-purple-500/40 shadow-sm shadow-purple-950/50"
+                              : "text-slate-400 hover:text-white hover:bg-slate-900/60 border border-transparent"
                           }`}
                         >
-                          <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-xs font-semibold truncate flex items-center gap-1.5">
-                              <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 ${isAct ? "text-violet-400" : "text-slate-500"}`} />
-                              <span className="truncate">{sess.last_message || "Empathetic Support"}</span>
-                            </p>
-                            <p className="text-[10px] text-slate-500 mt-1 font-mono">
-                              {sess.last_active ? new Date(sess.last_active).toLocaleDateString() : "Just now"}
-                            </p>
+                          <div className="min-w-0 flex-1 pr-2 flex items-center gap-2.5">
+                            <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isAct ? "text-purple-400" : "text-slate-500 group-hover:text-slate-300"}`} />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs truncate block">{sess.last_message || "Empathetic Session"}</span>
+                              <span className="text-[10px] text-slate-500 font-mono block">
+                                {sess.created_at ? formatTime(sess.created_at) : (sess.last_active ? formatTime(sess.last_active) : "Recent")}
+                              </span>
+                            </div>
                           </div>
                           <button
                             onClick={(e) => handleDeleteSession(sess.session_id, e)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all"
-                            aria-label="Delete Session"
+                            className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                            aria-label="Delete Chat"
+                            title="Delete Session"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -519,93 +521,94 @@ export default function ChatPage() {
                     })
                   )}
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Core Chat Stream & Interactive Workspace Panel */}
-          <div className="flex-1 flex flex-col justify-between bg-slate-950 relative overflow-hidden">
+                <button
+                  onClick={handleNewSession}
+                  className="w-full py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-purple-500/40 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm group shrink-0"
+                >
+                  <Plus className="w-4 h-4 text-purple-400 group-hover:rotate-90 transition-transform duration-200" />
+                  <span>Start New Session</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Visual Persona Selector Pill Bar */}
-            <div className="bg-slate-900/40 border-b border-slate-800/80 p-3 md:p-4 overflow-x-auto flex items-center gap-2 scrollbar-none backdrop-blur-md">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block flex-shrink-0 mr-1 hidden sm:inline">
-                AI Guide:
-              </span>
-
-              {Object.keys(PERSONA_METADATA).map((key) => {
-                const meta = PERSONA_METADATA[key];
-                const Icon = meta.icon;
-                const isSel = activePersona === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => handlePersonaChange(key)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl text-xs font-semibold transition-all duration-200 flex-shrink-0 border ${
-                      isSel
-                        ? `bg-slate-900 ${meta.textCol} ${meta.borderCol} ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/10 scale-[1.02]`
-                        : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
-                    }`}
-                  >
-                    <div className={`p-1 rounded-xl ${isSel ? meta.bgCol : "bg-slate-800"}`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="text-left leading-tight">
-                      <span className="block font-bold truncate">{meta.name.split(" ")[0]}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active Persona Banner Details */}
-            <div className="bg-slate-900/20 border-b border-white/5 px-6 py-2 flex items-center justify-between text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <ActiveIcon className={`w-4 h-4 ${activeMeta.textCol}`} />
-                <span className="font-bold text-white">{activeMeta.name}</span>
-                <span className="text-slate-500">•</span>
-                <span className="text-[11px] text-slate-400">{activeMeta.tag}</span>
-              </div>
-              <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Active Model
-              </span>
-            </div>
-
-            {/* Chat Stream Viewport */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+          {/* Central Chat Stream & Viewport */}
+          <div className="flex-1 flex flex-col justify-between h-full min-w-0 min-h-0 overflow-hidden bg-slate-950/70 relative">
+            {/* Scrollable Message Stream */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-4 py-6 md:px-8 space-y-6 max-w-4xl w-full mx-auto scrollbar-thin scrollbar-thumb-slate-800/80">
+              {/* Hero State (When Conversation is Fresh) */}
               {messages.length <= 1 && (
-                <div className="my-4 space-y-6 max-w-xl mx-auto">
-                  <div className="glass p-6 text-center space-y-3 rounded-3xl border border-violet-500/20 bg-slate-900/40">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-pink-500 flex items-center justify-center text-white mx-auto shadow-lg shadow-violet-500/20">
-                      <Sparkles className="w-6 h-6 animate-spin-slow" />
+                <div className="py-6 md:py-10 space-y-8 max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-400">
+                  {/* Glowing Emblem & Greeting */}
+                  <div className="space-y-4">
+                    <div className="relative inline-block">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-600 to-cyan-400 blur-xl opacity-40 animate-pulse" />
+                      <img
+                        src="/logo.png"
+                        alt="MindCare AI Logo"
+                        className="relative w-20 h-20 rounded-full object-cover border-2 border-purple-400/40 shadow-2xl mx-auto"
+                      />
                     </div>
-                    <h3 className="text-base font-bold text-white">How are you feeling right now?</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Express your thoughts freely. MindCare AI adapts to your tone, offers evidence-based guidance, and tracks your emotional stability.
-                    </p>
+
+                    <div>
+                      <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-purple-200 via-indigo-100 to-cyan-200 bg-clip-text text-transparent">
+                        Hello, {user.full_name?.split(" ")[0] || user.username}
+                      </h1>
+                      <p className="text-xs md:text-sm text-slate-400 max-w-md mx-auto leading-relaxed font-medium mt-2">
+                        How are you feeling today? MindCare AI senses your emotion, acoustic tone, and text to adapt empathetically.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Starter Prompt Chips */}
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block text-center">
-                      Quick Conversation Starters
+                  {/* Quick Mood Check-in Selector Bar */}
+                  <div className="space-y-2.5">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-400 flex items-center justify-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" /> One-Tap Mood Check-in
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {STARTER_PROMPTS.map((prompt, idx) => (
+                    <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl mx-auto">
+                      {QUICK_MOOD_CHECKINS.map((mood, idx) => (
                         <button
                           key={idx}
-                          onClick={() => handleSend(prompt.text)}
-                          className="glass p-3 rounded-2xl border border-slate-800 hover:border-violet-500/40 text-left text-xs text-slate-300 hover:text-white transition-all hover:scale-[1.01] flex items-start gap-2.5 group"
+                          onClick={() => handleSend(mood.prompt)}
+                          className="px-3 py-2 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/40 text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1.5 transition-all shadow-sm hover:scale-105 active:scale-95"
                         >
-                          <span className="text-sm">{prompt.icon}</span>
-                          <span className="leading-snug group-hover:text-violet-300 transition-colors">{prompt.text}</span>
+                          <span className="text-base">{mood.emoji}</span>
+                          <span>{mood.label}</span>
                         </button>
                       ))}
                     </div>
                   </div>
+
+                  {/* 4 Categorized Starter Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-left pt-2">
+                    {STARTER_PROMPTS.map((prompt, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSend(prompt.text)}
+                        className={`p-4 rounded-3xl bg-slate-900/60 border ${prompt.gradient} hover:bg-slate-900/90 transition-all duration-200 group flex flex-col justify-between gap-3 shadow-lg hover:scale-[1.015] active:scale-[0.99]`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-2xl p-2 rounded-2xl bg-white/5">{prompt.icon}</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            {prompt.category}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition-colors mb-1">
+                            {prompt.title}
+                          </h4>
+                          <p className="text-xs text-slate-400 leading-snug line-clamp-2">
+                            {prompt.text}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
+              {/* Conversation Messages */}
               {messages.map((msg) => (
                 <ChatBubble key={msg.id} message={msg} />
               ))}
@@ -614,110 +617,101 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Multimodal & Input Area */}
-            <div className="bg-slate-900/90 border-t border-slate-800/80 flex flex-col backdrop-blur-md">
-              <div className="flex items-center gap-3 px-4 md:px-6 pt-3">
-                <button
-                  onClick={showWebcam ? stopWebcam : startWebcam}
-                  className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${
-                    showWebcam
-                      ? "bg-violet-500/20 border-violet-500/40 text-violet-300"
-                      : "bg-slate-950/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5 text-violet-400" />
-                  <span>{showWebcam ? "Close Camera" : "Facial Snapshot"}</span>
-                </button>
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${
-                    isRecording
-                      ? "bg-rose-500/20 border-rose-500/40 text-rose-300 animate-pulse"
-                      : "bg-slate-950/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  <Mic className="w-3.5 h-3.5 text-rose-400" />
-                  <span>{isRecording ? "Stop Recording" : "Voice Note"}</span>
-                </button>
-              </div>
+            {/* Floating Chat Input Dock */}
+            <div className="shrink-0 p-3 md:px-6 md:pb-5 max-w-4xl w-full mx-auto">
+              {/* Hidden File Input for All Files */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
 
-              {/* Webcam Stream Camera */}
-              {showWebcam && (
-                <div className="flex flex-col items-center gap-2 p-4 bg-slate-950/80 border-t border-b border-slate-800 my-2">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-64 h-48 rounded-2xl border border-violet-500/30 bg-black shadow-lg"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={captureSnapshot}
-                      className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-violet-500/20"
-                    >
-                      Capture Snapshot
-                    </button>
-                    <button
-                      onClick={stopWebcam}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              <ChatInput
+                onSend={handleSend}
+                disabled={isLoading}
+                onWebcamClick={showWebcam ? stopWebcam : startWebcam}
+                onFileUploadClick={() => fileInputRef.current?.click()}
+                onVoiceRecordClick={isRecording ? stopRecording : startRecording}
+                imagePreview={imagePreview}
+                attachedFileName={attachedFileName}
+                audioUrl={audioUrl}
+                isRecording={isRecording}
+                onRemoveImage={() => { setCapturedImage(null); setImagePreview(null); setAttachedFile(null); setAttachedFileName(null); }}
+                onRemoveFile={() => { setAttachedFile(null); setAttachedFileName(null); setCapturedImage(null); setImagePreview(null); }}
+                onRemoveAudio={() => { setRecordedAudio(null); setAudioUrl(null); }}
+                onStopRecording={stopRecording}
+              />
 
-              {/* Multimodal Preview Bar */}
-              {(imagePreview || audioUrl || isRecording) && !showWebcam && (
-                <div className="bg-slate-950/60 px-6 py-2.5 flex items-center gap-4 flex-wrap border-b border-slate-800/80">
-                  {imagePreview && (
-                    <div className="relative">
-                      <img
-                        src={imagePreview}
-                        className="w-16 h-12 rounded-xl border border-violet-500/30 object-cover"
-                        alt="Face snapshot preview"
-                      />
-                      <button
-                        onClick={() => { setCapturedImage(null); setImagePreview(null); }}
-                        className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-950 border border-white/20 text-slate-400 hover:text-white flex items-center justify-center text-xs"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  )}
-                  {audioUrl && (
-                    <div className="flex items-center gap-2 bg-slate-900 p-1.5 px-3 rounded-xl border border-slate-800">
-                      <audio src={audioUrl} controls className="h-6 w-44" />
-                      <button
-                        onClick={() => { setRecordedAudio(null); setAudioUrl(null); }}
-                        className="w-4 h-4 rounded-full text-slate-400 hover:text-white flex items-center justify-center text-sm"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  )}
-                  {isRecording && (
-                    <div className="flex items-center gap-2 text-rose-400 text-xs font-semibold animate-pulse">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 block" />
-                      <span>Recording voice audio...</span>
-                      <button
-                        onClick={stopRecording}
-                        className="ml-2 px-2 py-0.5 bg-rose-500/25 hover:bg-rose-500/40 text-rose-200 rounded text-[10px] transition-all"
-                      >
-                        Stop
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <ChatInput onSend={handleSend} disabled={isLoading} />
+              {/* Disclaimer Notice */}
+              <p className="text-[10px] text-slate-500 text-center font-medium mt-2">
+                MindCare AI is an empathetic wellness companion. For acute distress or clinical diagnosis, please consult a licensed healthcare professional.
+              </p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Camera Capture Modal */}
+      <AnimatePresence>
+        {showWebcam && (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="max-w-md w-full bg-slate-900 border border-purple-500/30 rounded-3xl p-6 shadow-2xl relative space-y-4"
+            >
+              <button
+                onClick={stopWebcam}
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5" /> Facial Emotion Capture
+                </span>
+                <h3 className="text-lg font-bold text-white">Camera Check-in</h3>
+                <p className="text-xs text-slate-400">Position your face in good lighting to read emotional cues.</p>
+              </div>
+
+              {/* Video Feed */}
+              <div className="relative rounded-2xl overflow-hidden border border-purple-500/30 bg-black aspect-video flex items-center justify-center shadow-inner">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                {/* Face Framing Reticle */}
+                <div className="absolute inset-8 border border-dashed border-purple-400/30 rounded-2xl pointer-events-none" />
+              </div>
+
+              {/* Control Buttons */}
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  onClick={captureSnapshot}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Capture Snapshot</span>
+                </button>
+                <button
+                  onClick={stopWebcam}
+                  className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Crisis Safety Modal */}
       <CrisisModal
         isOpen={isCrisis}
         severity={crisisSeverity}
@@ -726,97 +720,93 @@ export default function ChatPage() {
         onClose={() => setIsCrisis(false)}
       />
 
-      {/* Share Conversation Session Modal Overlay */}
-      {showShareModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="glass max-w-lg w-full p-6 md:p-8 rounded-3xl border border-violet-500/30 space-y-6 relative">
-            <button
-              onClick={() => setShowShareModal(false)}
-              className="absolute top-6 right-6 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+      {/* Share Session Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="max-w-lg w-full bg-slate-900 border border-purple-500/30 p-6 md:p-8 rounded-3xl shadow-2xl space-y-6 relative"
             >
-              <X className="w-4 h-4" />
-            </button>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="absolute top-6 right-6 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider block flex items-center gap-1.5">
-                <Share2 className="w-3.5 h-3.5" /> Secure Session Sharing
-              </span>
-              <h3 className="text-xl font-bold text-white">Share Check-in Conversation</h3>
-              <p className="text-xs text-slate-400">
-                Share a direct link or copy a formatted transcript of your session with MindCare AI ({activeMeta.name}).
-              </p>
-            </div>
-
-            {/* Privacy Anonymize Toggle */}
-            <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <ShieldAlert className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <div>
-                  <span className="text-xs font-bold text-white block">Anonymize Personal Information</span>
-                  <span className="text-[10px] text-slate-400 block">Replaces your user name with "Anonymous User" in shares.</span>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={anonymizeShare}
-                onChange={(e) => setAnonymizeShare(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-violet-500 focus:ring-violet-500 cursor-pointer"
-              />
-            </div>
-
-            {/* Share Options List */}
-            <div className="space-y-3">
-              {/* Option 1: Direct Session Link */}
-              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <LinkIcon className="w-3.5 h-3.5 text-violet-400" /> Shareable Session URL
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Share2 className="w-3.5 h-3.5" /> Secure Session Sharing
                 </span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={getShareableUrl()}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none"
-                  />
+                <h3 className="text-xl font-bold text-white">Share Check-in Conversation</h3>
+                <p className="text-xs text-slate-400">
+                  Share a direct link or copy a formatted transcript of your session with MindCare AI.
+                </p>
+              </div>
+
+              {/* Privacy Anonymize Toggle */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <ShieldAlert className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-white block">Anonymize Personal Information</span>
+                    <span className="text-[10px] text-slate-400 block">Replaces your user name with &quot;Anonymous User&quot; in shares.</span>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={anonymizeShare}
+                  onChange={(e) => setAnonymizeShare(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-purple-500 focus:ring-purple-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Share Options */}
+              <div className="space-y-3">
+                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <LinkIcon className="w-3.5 h-3.5 text-purple-400" /> Shareable Session Link
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={getShareableUrl()}
+                      className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none"
+                    />
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-md"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? "Copied!" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-white block flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-cyan-400" /> Copy Text Transcript
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">Copy full formatted conversation to clipboard.</span>
+                  </div>
                   <button
-                    onClick={handleCopyLink}
-                    className="btn-primary py-2 px-3.5 text-xs font-bold flex items-center gap-1.5 flex-shrink-0"
+                    onClick={handleCopyTranscript}
+                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
                   >
-                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
+                    {copiedTranscript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-cyan-400" />}
+                    <span>{copiedTranscript ? "Copied!" : "Copy Text"}</span>
                   </button>
                 </div>
               </div>
-
-              {/* Option 2: Copy Rich Text Transcript */}
-              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-white block flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-cyan-400" /> Copy Text Transcript
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">Copy full formatted conversation text to clipboard.</span>
-                </div>
-                <button
-                  onClick={handleCopyTranscript}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 text-xs font-bold flex items-center gap-1.5 transition-all flex-shrink-0"
-                >
-                  {copiedTranscript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-cyan-400" />}
-                  <span>{copiedTranscript ? "Copied!" : "Copy Text"}</span>
-                </button>
-              </div>
-
-              {/* Option 3: Native Device Share Drawer (WhatsApp, Messages, Email) */}
-              <button
-                onClick={handleNativeShare}
-                className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-violet-600/20"
-              >
-                <Smartphone className="w-4 h-4" />
-                <span>Share via App (WhatsApp, Messages, Email...)</span>
-              </button>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

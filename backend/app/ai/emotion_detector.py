@@ -30,13 +30,34 @@ _MODEL_PATH = os.path.join(_ARTIFACTS_DIR, "emotion_classifier.joblib")
 _VEC_PATH = os.path.join(_ARTIFACTS_DIR, "tfidf_vectorizer.joblib")
 
 _BASE_MAPPING: Dict[str, str] = {
-    "joy":      "Happy",
+    "joy": "Happy",
+    "amusement": "Happy",
+    "approval": "Happy",
+    "caring": "Happy",
+    "love": "Happy",
+    "gratitude": "Happy",
+    "pride": "Happy",
+    "relief": "Happy",
+    "excitement": "Excited",
+    "admiration": "Excited",
+    "desire": "Excited",
     "surprise": "Excited",
-    "neutral":  "Neutral",
-    "sadness":  "Sad",
-    "anger":    "Angry",
-    "disgust":  "Angry",
-    "fear":     "Fear",
+    "optimism": "Hopeful",
+    "sadness": "Sad",
+    "grief": "Sad",
+    "disappointment": "Sad",
+    "embarrassment": "Sad",
+    "remorse": "Sad",
+    "anger": "Angry",
+    "annoyance": "Angry",
+    "disapproval": "Angry",
+    "disgust": "Angry",
+    "fear": "Fear",
+    "nervousness": "Anxiety",
+    "confusion": "Stress",
+    "realization": "Stress",
+    "curiosity": "Neutral",
+    "neutral": "Neutral",
 }
 
 _LONELINESS_KEYWORDS = ["alone", "lonely", "nobody", "no one", "isolated", "abandoned", "empty", "akela", "akeli", "naku chala lonely", "solo", "seul"]
@@ -125,21 +146,30 @@ class EmotionDetector:
             except Exception as e:
                 logger.error(f"Failed to load monolingual emotion model: {e}")
 
-        # 3. Try HuggingFace pipeline
-        try:
-            from transformers import pipeline as hf_pipeline
-            from app.config import settings
-            logger.info(f"Loading HuggingFace emotion model: {settings.EMOTION_MODEL_NAME}")
-            self._hf_pipeline = hf_pipeline(
-                "text-classification",
-                model=settings.EMOTION_MODEL_NAME,
-                return_all_scores=True,
-                device=-1,
-            )
-            logger.info("HuggingFace emotion model loaded successfully.")
-        except Exception as e:
-            logger.warning(f"HuggingFace pipeline unavailable ({e}); using heuristic fallback engine.")
-            self._hf_pipeline = None
+        # 3. Try HuggingFace pipeline as fallback if custom models not available
+        if self._multi_model is None and self._mono_model is None:
+            try:
+                from transformers import pipeline as hf_pipeline
+                from app.config import settings
+                logger.info(f"Loading HuggingFace emotion model: {settings.EMOTION_MODEL_NAME}")
+                try:
+                    self._hf_pipeline = hf_pipeline(
+                        "text-classification",
+                        model=settings.EMOTION_MODEL_NAME,
+                        top_k=None,
+                        device=-1,
+                    )
+                except Exception:
+                    self._hf_pipeline = hf_pipeline(
+                        "text-classification",
+                        model=settings.EMOTION_MODEL_NAME,
+                        return_all_scores=True,
+                        device=-1,
+                    )
+                logger.info("HuggingFace emotion model loaded successfully.")
+            except Exception as e:
+                logger.warning(f"HuggingFace pipeline unavailable ({e}); using heuristic fallback engine.")
+                self._hf_pipeline = None
 
     def detect(self, text: str) -> Dict:
         """
@@ -161,6 +191,236 @@ class EmotionDetector:
         self._load_models()
 
         cleaned = _preprocess(text[:512])
+        # Conservative spelling normalization
+        from app.services.intent_service import intent_service
+        cleaned = intent_service.normalize_typos(cleaned)
+        lower = cleaned.lower()
+
+        # Step 0: Disambiguate Speaker/Target & Conversational Intents
+        # 0.1 Questions about the Assistant or third-party state (not user's emotion)
+        if re.search(r"\b(why\s+are\s+you\s+(so\s+)?(angry|mad|sad|upset|harsh)|are\s+you\s+(angry|mad|sad|upset)|is\s+(he|she|they|it)\s+(angry|mad|sad)|do\s+you\s+feel)\b", lower):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.88,
+                "raw_scores": {"Neutral": 0.88, "Curiosity": 0.12},
+                "all_mapped_scores": {"Neutral": 0.88},
+                "detected_language": "en",
+                "engine": "intent_disambiguator",
+            }
+
+        # 0.15 Questions about AI Identity, Capabilities, Body, Eating, Food
+        if re.search(r"\b(what\s+is\s+your\s+food|what\s+do\s+you\s+eat|do\s+you\s+eat|are\s+you\s+(an\s+)?ai|who\s+are\s+you|what\s+are\s+you|who\s+made\s+you|what\s+can\s+you\s+do|do\s+you\s+sleep|are\s+you\s+human|do\s+you\s+have\s+a\s+body)\b", lower):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.90,
+                "raw_scores": {"Neutral": 0.90, "Curiosity": 0.10},
+                "all_mapped_scores": {"Neutral": 0.90, "Curiosity": 0.10},
+                "detected_language": "en",
+                "engine": "ai_identity_evaluator",
+            }
+
+        # 0.16 Physical Hunger, Thirst, Meals, Drinks, Food, Recipes (Physical needs != psychological stress/happiness)
+        if (
+            re.search(r"^(hungry|hungr|starving|thirsty|food|snack|lunch|dinner|breakfast)[\s.?!]*$", lower)
+            or re.search(r"\b(feeling\s+(hungr|hungry|starving|thirsty)|i('m| am)\s+(hungr|hungry|starving|thirsty)|want\s+to\s+eat|what\s+should\s+i\s+eat|recipe|cook|cooking|baking|recommend\s+(a\s+)?(meal|food|snack|restaurant))\b", lower)
+        ):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.88,
+                "raw_scores": {"Neutral": 0.88, "Physical": 0.12},
+                "all_mapped_scores": {"Neutral": 0.88, "Physical": 0.12},
+                "detected_language": "en",
+                "engine": "lifestyle_evaluator",
+            }
+
+        # 0.17 Short conversational replies & pacing words ('nothing', 'hurry', 'ok', 'okay', 'explain simply')
+        if re.search(r"^(nothing|nothing\s+much|not\s+much|none|hurry|be\s+quick|make\s+it\s+quick|in\s+a\s+rush)[\s.?!]*$", lower) or re.search(
+            r"\b(explain\s+it\s+simply|make\s+it\s+simple|in\s+simple\s+terms|eli5|simplify)\b", lower
+        ):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.88,
+                "raw_scores": {"Neutral": 0.88, "Calm": 0.12},
+                "all_mapped_scores": {"Neutral": 0.88, "Calm": 0.12},
+                "detected_language": "en",
+                "engine": "conversational_evaluator",
+            }
+
+        # 0.2 Greetings and small talk (including informal 'what's up', 'what's ap', 'sup')
+        if (
+            re.search(r"^(hi|hello|hey|howdy|good\s+(morning|afternoon|evening)|what'?s\s+(up|ap|app)|whats\s+(up|ap|app)|wats\s+(up|ap)|sup|wassup|wazzup)([\s,!.]*how\s+(are|aer)\s+(you|yoiu)[\s?!]*)?$", lower)
+            or re.search(r"^(how\s+(are|aer)\s+(you|yoiu)|what'?s\s+(up|ap|app)|whats\s+(up|ap|app)|sup|wassup)[\s?!]*$", lower)
+            or (re.search(r"\b(hi|hello|hey|what'?s\s+up|sup)\b", lower) and len(lower.split()) <= 4 and not any(k in lower for k in ["sad", "depress", "anxious", "stress", "die", "kill", "hurt", "angry"]))
+        ):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.90,
+                "raw_scores": {"Neutral": 0.90, "Happy": 0.10},
+                "all_mapped_scores": {"Neutral": 0.90, "Happy": 0.10},
+                "detected_language": "en",
+                "engine": "intent_disambiguator",
+            }
+
+        # 0.3 Expressions of Gratitude
+        if re.search(r"^(thank\s+you|thanks|thank\s+you\s+so\s+much|thanks\s+a\s+lot|appreciate\s+it)[\s.!]*$", lower) or lower in ["thank you", "thanks", "thx"]:
+            return {
+                "emotion": "Happy",
+                "confidence": 0.92,
+                "raw_scores": {"Happy": 0.92, "Neutral": 0.08},
+                "all_mapped_scores": {"Happy": 0.92, "Neutral": 0.08},
+                "detected_language": "en",
+                "engine": "intent_disambiguator",
+            }
+
+        # 0.4 Exercise / Grounding Requests (Tool usage rather than negative affect)
+        if re.search(r"\b(give\s+me\s+a\s+(simple\s+)?grounding\s+exercise|grounding\s+exercise|breathing\s+exercise|guide\s+me\s+through\s+grounding)\b", lower):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.85,
+                "raw_scores": {"Neutral": 0.85, "Hopeful": 0.15},
+                "all_mapped_scores": {"Neutral": 0.85, "Hopeful": 0.15},
+                "detected_language": "en",
+                "engine": "intent_disambiguator",
+            }
+
+        # 0.44 Technical, Educational & Career/Interview Topics (AI, ML, Study, Coding)
+        # Standalone or conceptual requests about technical topics, interviews, or study topics
+        # must NOT be classified as negative affect (e.g. 'exams' != Stress, 'AI' != low confidence)
+        if (
+            re.search(r"^(ai|artificial intelligence|artifical inteligence|exams?|finals?|midterms?|machine learning|deep learning|data science|interview|job interview|coding interview|internship review|supervised learning|unsupervised learning|projects?)[\s.?!]*$", lower)
+            or (
+                re.search(r"\b(ai|artificial intelligence|machine learning|deep learning|neural networks?|supervised learning|unsupervised learning|data science|algorithms?|python|fastapi|projects?|cloud computing|system design)\b", lower)
+                and not any(emo in lower for emo in ["anxious", "anxiety", "worried", "scared", "sad", "depressed", "overwhelmed", "hopeless", "kill", "die", "hurt"])
+            )
+            or (
+                re.search(r"^(exams?|midterms?|finals?|study tips|interview|interviews)[\s.?!]*$", lower)
+                and not any(emo in lower for emo in ["anxious", "anxiety", "worried", "scared", "sad", "depressed", "overwhelmed", "hopeless", "kill", "die", "hurt"])
+            )
+        ):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.90,
+                "raw_scores": {"Neutral": 0.90, "Curiosity": 0.10},
+                "all_mapped_scores": {"Neutral": 0.90, "Curiosity": 0.10},
+                "detected_language": "en",
+                "engine": "topic_disambiguator",
+            }
+
+        # 0.45 Factual or Educational Questions about Mental Health Concepts or General Subjects
+        if re.search(r"\b(can\s+you\s+explain|explain|what\s+is|tell\s+me\s+about|define)\s+([a-z\s]+)\b", lower) and not any(
+            self_ref in lower for self_ref in ["my feelings", "i feel", "hurt", "die", "kill"]
+        ):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.90,
+                "raw_scores": {"Neutral": 0.90, "Curiosity": 0.10},
+                "all_mapped_scores": {"Neutral": 0.90, "Curiosity": 0.10},
+                "detected_language": "en",
+                "engine": "intent_disambiguator",
+            }
+
+        # 0.46 Physical Symptoms (Physiological bodily symptoms != psychological stress or anxiety)
+        if re.search(r"\b(dizzy|dizziness|lightheaded|light-headed|vertigo|faint|nausea|nauseous|vomit|headache|migraine|chest pain|chest tightness|shortness of breath|heart palpitations|loss of balance|numbness|tingling)\b", lower) and not any(
+            emo_word in lower for emo_word in ["heartbroken", "depressed", "suicidal", "kill", "die", "crying"]
+        ):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.85,
+                "raw_scores": {"Neutral": 0.85, "Stress": 0.15},
+                "all_mapped_scores": {"Neutral": 0.85, "Stress": 0.15},
+                "detected_language": "en",
+                "engine": "physical_symptom_evaluator",
+            }
+
+        # 0.47 Unclear Input / Keyboard Mash / Short Typos ('ih')
+        clean_alpha = re.sub(r"[^\w]", "", lower)
+        if re.search(r"^ih[\s.?!]*$", lower) or (len(clean_alpha) >= 4 and not re.search(r"[aeiouy]", clean_alpha)):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.40,  # Below 0.50 threshold so frontend displays 'Uncertain'
+                "raw_scores": {"Neutral": 0.40, "Uncertain": 0.60},
+                "all_mapped_scores": {"Neutral": 0.40, "Uncertain": 0.60},
+                "detected_language": "en",
+                "engine": "unclear_input_evaluator",
+            }
+
+        # 0.48 Practical Scheduling / Review Problems ('My review is tomorrow', 'no time for me')
+        if re.search(r"\b(internship review|review is tomorrow|review tomorrow|presentation tomorrow|job interview|exam tomorrow|no time for me|not enough time|there is no time to prepare)\b", lower):
+            return {
+                "emotion": "Neutral",
+                "confidence": 0.85,
+                "raw_scores": {"Neutral": 0.85, "Stress": 0.15},
+                "all_mapped_scores": {"Neutral": 0.85, "Stress": 0.15},
+                "detected_language": "en",
+                "engine": "practical_problem_evaluator",
+            }
+
+        # 0.5 Contextual Negation & Direct Emotional Self-Report Verification
+        has_direct_negation = bool(re.search(r"\b(not|never|don'?t|can'?t|hardly|scarcely|barely|no\s+longer|didn'?t|won'?t)\b", lower))
+        is_positive_word = bool(re.search(r"\b(happy|joyful|glad|cheerful|delighted|pleased)\b", lower))
+        is_negative_word = bool(re.search(r"\b(sad|depressed|heartbroken|miserable|down)\b", lower))
+        is_anxious_word = bool(re.search(r"\b(anxious|anxiety|nervous|worried|panicking|panic|scared|terrified)\b", lower))
+        is_self_reference = bool(re.search(r"\b(i\b|i'm|i\s+feel|feeling|myself|me\b)\b", lower))
+
+        if is_self_reference and is_anxious_word:
+            if has_direct_negation:
+                return {
+                    "emotion": "Neutral",
+                    "confidence": 0.85,
+                    "raw_scores": {"Neutral": 0.85, "Calm": 0.15},
+                    "all_mapped_scores": {"Neutral": 0.85, "Calm": 0.15},
+                    "detected_language": "en",
+                    "engine": "negation_context_evaluator",
+                }
+            else:
+                return {
+                    "emotion": "Anxiety",
+                    "confidence": 0.92,
+                    "raw_scores": {"Anxiety": 0.92, "Stress": 0.08},
+                    "all_mapped_scores": {"Anxiety": 0.92, "Stress": 0.08},
+                    "detected_language": "en",
+                    "engine": "self_report_evaluator",
+                }
+
+        if is_self_reference and is_positive_word:
+            if has_direct_negation:
+                return {
+                    "emotion": "Sad",
+                    "confidence": 0.88,
+                    "raw_scores": {"Sad": 0.88, "Neutral": 0.12},
+                    "all_mapped_scores": {"Sad": 0.88, "Neutral": 0.12},
+                    "detected_language": "en",
+                    "engine": "negation_context_evaluator",
+                }
+            else:
+                return {
+                    "emotion": "Happy",
+                    "confidence": 0.95,
+                    "raw_scores": {"Happy": 0.95, "Excited": 0.05},
+                    "all_mapped_scores": {"Happy": 0.95, "Excited": 0.05},
+                    "detected_language": "en",
+                    "engine": "self_report_evaluator",
+                }
+
+        if is_self_reference and is_negative_word:
+            if has_direct_negation:
+                return {
+                    "emotion": "Neutral",
+                    "confidence": 0.85,
+                    "raw_scores": {"Neutral": 0.85, "Hopeful": 0.15},
+                    "all_mapped_scores": {"Neutral": 0.85, "Hopeful": 0.15},
+                    "detected_language": "en",
+                    "engine": "negation_context_evaluator",
+                }
+            else:
+                return {
+                    "emotion": "Sad",
+                    "confidence": 0.95,
+                    "raw_scores": {"Sad": 0.95, "Neutral": 0.05},
+                    "all_mapped_scores": {"Sad": 0.95, "Neutral": 0.05},
+                    "detected_language": "en",
+                    "engine": "self_report_evaluator",
+                }
 
         # Step 1: Detect language & translate if non-English
         translated_en, detected_lang = detect_and_translate(cleaned)

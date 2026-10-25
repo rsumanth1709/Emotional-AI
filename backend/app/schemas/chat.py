@@ -26,16 +26,26 @@ class CrisisResource(BaseModel):
     description: str
 
 
+class RAGSource(BaseModel):
+    document_id: str
+    title: str
+    source_name: str
+    source_url: str
+    relevance_score: float
+
+
 class ChatResponse(BaseModel):
     message_id: str
     session_id: str
     response: str
     emotion_result: EmotionResult
+    intent: Optional[str] = None
     is_crisis: bool = False
     crisis_severity: Optional[str] = None
     crisis_type: Optional[str] = None
     crisis_resources: Optional[List[CrisisResource]] = None
     persona: Optional[str] = "friendly"
+    sources: Optional[List[RAGSource]] = None
     timestamp: datetime
 
 

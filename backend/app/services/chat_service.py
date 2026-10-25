@@ -15,7 +15,7 @@ from app.ai.translator import detect_and_translate, translate_to_language
 from app.ai.response_generator import response_generator
 from app.models.chat import Chat
 from app.schemas.chat import (
-    ChatResponse, EmotionResult, CrisisResource, SessionSummary
+    ChatResponse, EmotionResult, CrisisResource, SessionSummary, RAGSource
 )
 from app.services.crisis_service import crisis_service
 from app.services.emotion_service import emotion_service
@@ -28,6 +28,7 @@ from app.ai.speech_translator import speech_translator
 from app.ai.face_emotion_detector import face_emotion_detector
 from app.ai.voice_emotion_detector import voice_emotion_detector
 from app.ai.multimodal_fuser import multimodal_fuser
+from app.services.file_parser_service import file_parser_service
 
 # Crisis override response — replaces the LLM for critical/high alerts
 _CRISIS_RESPONSE = (
@@ -73,19 +74,80 @@ class ChatService:
         if not session_id:
             session_id = str(uuid.uuid4())
 
+        # ── 0. Pseudonymous Identity & LLM Security Validation ───────────
+        from app.services.privacy_service import privacy_service
+        from app.services.llm_security_service import llm_security_service
+
+        pseudo_user_id = privacy_service.get_or_create_pseudonym(db, user_id)
+
+        # Validate prompt safety, prompt injection, and jailbreak risk
+        sec_result = llm_security_service.validate_prompt_pipeline(db, pseudo_user_id, message)
+        if not sec_result["is_safe"]:
+            return ChatResponse(
+                message_id=str(uuid.uuid4()),
+                session_id=session_id,
+                response=sec_result.get("error", "I'm unable to process that request safely."),
+                emotion_result=EmotionResult(
+                    emotion="neutral",
+                    sentiment="neutral",
+                    stress_score=0.0,
+                    confidence=1.0,
+                    all_scores={"neutral": 1.0},
+                ),
+                is_crisis=False,
+                timestamp=datetime.utcnow(),
+            )
+
         message_id = str(uuid.uuid4())
         now = datetime.utcnow()
+
+        # ── 0.1. Mental Health Safety Risk Engine Assessment ─────────────
+        from app.services.safety_risk_engine import safety_risk_engine
+        safety_eval = safety_risk_engine.analyze_conversation_safety(db, pseudo_user_id, session_id, message)
+        if safety_eval["requires_safety_override"]:
+            raw_res = safety_eval.get("resources") or []
+            crisis_res = [
+                CrisisResource(
+                    name=r.get("name", "Helpline"),
+                    number=r.get("number", "112"),
+                    description=r.get("description", "Crisis Support"),
+                )
+                for r in raw_res
+            ]
+            return ChatResponse(
+                message_id=message_id,
+                session_id=session_id,
+                response=safety_eval["bot_response"],
+                emotion_result=EmotionResult(
+                    emotion="Sad",
+                    sentiment="negative",
+                    stress_score=9.5,
+                    confidence=1.0,
+                    all_scores={"Sad": 1.0},
+                ),
+                is_crisis=True,
+                crisis_severity="immediate",
+                crisis_type="suicide_ideation",
+                crisis_resources=crisis_res if crisis_res else None,
+                persona=persona,
+                sources=None,
+                timestamp=now,
+            )
 
         # ── 0. Emoji Interpretation ────────────────────────────────────────
         # Expand emoji-only or emoji-rich messages to readable text for the
         # emotion analyzer; also capture pre-built emoji responses.
         expanded_text, emoji_emotion, emoji_response = expand_emoji_message(message)
 
-        # ── 0.1. Language Translation & Auto-detection ─────────────────────
+        # ── 0.1. Multilingual Language & Code-Mix Analysis ─────────────────
+        from app.services.multilingual_service import multilingual_service
+        ml_analysis = multilingual_service.analyze_multilingual_message(db, message)
+        multi_lang_info = ml_analysis["language"]
+
         # Auto-detect incoming language. Translate to English for ML emotion models,
         # but capture target_lang to reply back in the same language.
         english_text, auto_lang = detect_and_translate(expanded_text)
-        active_target_lang = target_lang if (target_lang and target_lang != "auto") else auto_lang
+        active_target_lang = target_lang if (target_lang and target_lang != "auto") else multi_lang_info["primary_language"]
 
         # ── 1. Crisis Detection (safety interceptor) ───────────────────────
         crisis_result = crisis_service.check_and_handle(db, user_id, english_text, session_id)
@@ -104,10 +166,17 @@ class ChatService:
         # ── 3. Conversation History ────────────────────────────────────────
         history = self._get_history_for_context(db, user_id, session_id)
 
-        # ── 3.5. RAG Memory Context & Clinical Grounding ─────────────────────
+        # ── 3.5. Emotion-Aware RAG Retrieval & Memory Isolation ────────────
+        from app.services.rag_service import rag_service
         past_memories = memory_service.retrieve_relevant_memory(user_id, english_text, top_k=3)
-        rag_result = rag_engine.retrieve(query=english_text, emotion_context=emotion, top_k=2)
-        clinical_rag_context = rag_result.get("rag_prompt_context", "")
+
+        # ── 3.7. User Response Preference Retrieval ────────────────────────
+        from app.services.preference_service import preference_service
+        user_pref_dict = preference_service.get_user_preferences(db, user_id)["preferences"]
+        resolved_persona = persona if persona else user_pref_dict.get("persona", "supportive_friend")
+
+        rag_citations = []
+        clinical_rag_context = ""
 
         # ── 4. Generate Response ───────────────────────────────────────────
         if is_crisis and crisis_severity in ("critical", "high"):
@@ -119,21 +188,76 @@ class ChatService:
             bot_response = emoji_response
             logger.info(f"Emoji response used for message='{message}'")
         else:
-            bot_response = response_generator.generate(
-                text=english_text,
-                emotion=emotion,
-                sentiment=sentiment,
-                stress_score=stress_score,
+            rag_output = rag_service.process_chat_rag(
+                db=db,
+                user_id=user_id,
+                message=english_text,
+                session_id=session_id,
                 conversation_history=history,
                 past_memories=past_memories,
-                target_lang=active_target_lang,
-                persona=persona,
-                clinical_rag_context=clinical_rag_context,
+                emotion=emotion,
+                target_lang=active_target_lang or "en",
             )
+            bot_response = rag_output["response"]
+            rag_citations = rag_output.get("citations", [])
+            clinical_rag_context = "\n".join([f"[{c.get('title')}]: {c.get('source_name')}" for c in rag_citations])
+            if rag_output.get("is_crisis"):
+                is_crisis = True
+                crisis_severity = "high"
+                if rag_output.get("crisis_resources"):
+                    crisis_result["crisis_resources"] = rag_output["crisis_resources"]
 
         # Ensure response is translated into user asked target language
         if active_target_lang and active_target_lang not in ("en", "en-US", "auto"):
             bot_response = translate_to_language(bot_response, active_target_lang)
+
+        # ── 4.5. Pre-Delivery Quality & Safety Validation Interceptor ─────
+        from app.services.evaluation_service import evaluation_service
+        try:
+            eval_val_result = evaluation_service.evaluate_and_validate(
+                db=db,
+                user_id=user_id,
+                user_message=message,
+                initial_response=bot_response,
+                conversation_id=session_id or "default_session",
+                emotion=emotion,
+                selected_personality=persona or "supportive_friend",
+                message_id=message_id,
+            )
+            # Replace bot_response with validated/fallback text
+            bot_response = eval_val_result["delivered_text"]
+        except Exception as eval_err:
+            logger.error(f"Quality Evaluation validation interceptor failed: {eval_err}")
+
+        # ── 4.7. Hallucination & Unsupported-Claim Detection Interceptor ─
+        from app.services.hallucination_service import hallucination_service
+        try:
+            hall_res = hallucination_service.verify_and_rewrite_response(
+                db=db,
+                user_id=user_id,
+                response_text=bot_response,
+                conversation_id=session_id or "default_session",
+                message_id=message_id,
+                rag_context=clinical_rag_context,
+            )
+            bot_response = hall_res["delivered_text"]
+        except Exception as hall_err:
+            logger.error(f"Hallucination detection interceptor failed: {hall_err}")
+
+        # ── 4.8. Personal Emotional Baseline Observation Hook ────────────
+        try:
+            from app.services.baseline_service import baseline_service
+            baseline_service.record_observation(
+                db=db,
+                user_id=user_id,
+                conversation_id=session_id or "default_session",
+                emotion=emotion,
+                intensity=78.0,
+                confidence=0.90,
+                message_id=message_id,
+            )
+        except Exception as base_err:
+            pass
 
         # ── 5. Persist Messages ────────────────────────────────────────────
         user_chat = Chat(
@@ -165,6 +289,50 @@ class ChatService:
         # ── 6. Persist Emotion Record ──────────────────────────────────────
         emotion_service.save_emotion_record(db, user_id, analysis)
 
+        # ── 6.2. Persist Emotion Intensity Record ──────────────────────────
+        from app.services.intensity_service import intensity_service
+        try:
+            intensity_service.record_intensity(
+                db=db,
+                user_id=user_id,
+                text=message,
+                conversation_id=session_id,
+                message_id=message_id,
+            )
+        except Exception as ie:
+            logger.error(f"Emotion Intensity analysis hook failed: {ie}")
+
+        # ── 6.3. Persist Emotion Transition State ──────────────────────────
+        from app.services.transition_service import transition_service
+        try:
+            transition_service.record_turn_state(
+                db=db,
+                user_id=user_id,
+                conversation_id=session_id or "default_session",
+                emotion=emotion,
+                intensity=stress_score,
+                confidence=confidence,
+                message_id=message_id,
+            )
+        except Exception as te:
+            logger.error(f"Emotion Transition analysis hook failed: {te}")
+
+        # ── 6.4. Persist Emotional Triggers ─────────────────────────────────
+        from app.services.trigger_service import trigger_service
+        try:
+            trigger_service.detect_triggers_from_text(
+                db=db,
+                user_id=user_id,
+                text=message,
+                emotion=emotion,
+                intensity=stress_score,
+                confidence=confidence,
+                conversation_id=session_id,
+                message_id=message_id,
+            )
+        except Exception as trige:
+            logger.error(f"Emotional Trigger detection hook failed: {trige}")
+
         # ── 6.5. Persist Vector Memory ─────────────────────────────────────
         memory_service.add_memory(user_id, session_id, "user", message)
         if bot_response:
@@ -180,9 +348,18 @@ class ChatService:
         except Exception as ge:
             logger.error(f"Gamification chat reward hook failed: {ge}")
 
+        # ── 6.8. Structured Privacy-Conscious Diagnostics Logging ────────
+        rag_data = locals().get("rag_output", {}) or {}
+        diag_intent = rag_data.get("intent", "general_wellness") if not is_crisis else "crisis_safety"
+        diag_retrieved = rag_data.get("retrieved_count", len(rag_citations))
+        diag_fallback = rag_data.get("used_fallback", False)
+        diag_source = "safety_layer" if is_crisis else ("llm_model" if not diag_fallback else "grounded_fallback")
+
         logger.info(
-            f"Message processed | user={user_id} emotion={emotion} "
-            f"stress={stress_score:.1f} crisis={is_crisis}"
+            f"[Chat Diagnostics] session={session_id[:8]}... | intent={diag_intent} | "
+            f"emotion={emotion} (conf={confidence:.2f}) | risk_severity={crisis_severity} is_crisis={is_crisis} | "
+            f"retrieved_chunks={diag_retrieved} | llm_called={not diag_fallback and not is_crisis} | "
+            f"fallback_used={diag_fallback} | response_source={diag_source}"
         )
 
         # ── 7. Build Response ──────────────────────────────────────────────
@@ -190,6 +367,8 @@ class ChatService:
             [CrisisResource(**r) for r in crisis_result["crisis_resources"]]
             if is_crisis else None
         )
+
+        sources_data = [RAGSource(**c) for c in rag_citations] if rag_citations else None
 
         return ChatResponse(
             message_id=message_id,
@@ -202,11 +381,13 @@ class ChatService:
                 confidence=confidence,
                 all_scores=all_scores,
             ),
+            intent=diag_intent,
             is_crisis=is_crisis,
             crisis_severity=crisis_severity,
             crisis_type=crisis_result.get("risk_type"),
             crisis_resources=crisis_resources,
             persona=persona,
+            sources=sources_data,
             timestamp=now,
         )
 
@@ -278,17 +459,26 @@ class ChatService:
         session_id: Optional[str] = None,
         audio_path: Optional[str] = None,
         image_path: Optional[str] = None,
+        file_path: Optional[str] = None,
+        original_filename: Optional[str] = None,
         persona: Optional[str] = "friendly",
     ) -> ChatResponse:
         """
-        Processes a multimodal message containing optional text, audio, and face snapshots.
+        Processes a multimodal message containing optional text, audio, face snapshots,
+        and uploaded files of any type (PDF, documents, spreadsheets, code, text, etc.).
         """
-        # 1. Speech transcription if audio is provided and message is blank
+        # 1. Parse uploaded file if provided
+        parsed_file = None
+        if file_path:
+            parsed_file = file_parser_service.parse_file(file_path, original_filename)
+
+        # 2. Speech transcription if audio is provided and message is blank
         transcription = None
         if audio_path:
             transcription = speech_translator.transcribe(audio_path)
             
-        final_message = message or transcription or "[Sent a media message without text]"
+        file_tag = f"[Attached file: {parsed_file['filename']}]" if (parsed_file and not message) else None
+        final_message = message or transcription or file_tag or "[Sent a media message without text]"
 
         if not session_id:
             session_id = str(uuid.uuid4())
@@ -310,16 +500,24 @@ class ChatService:
         face_pred = None
         voice_pred = None
 
-        if english_text and len(english_text.strip()) >= 2:
-            text_pred = emotion_service.analyze(english_text)
+        text_to_analyze = english_text
+        if (not text_to_analyze or text_to_analyze.startswith("[Attached file:")) and parsed_file and parsed_file.get("text"):
+            text_to_analyze = parsed_file["text"][:1000]
+
+        if text_to_analyze and len(text_to_analyze.strip()) >= 2:
+            text_pred = emotion_service.analyze(text_to_analyze)
             if emoji_emotion:
                 text_pred["emotion"] = emoji_emotion
 
         if image_path:
             face_pred = face_emotion_detector.detect(image_path)
+        elif parsed_file and parsed_file.get("face_prediction"):
+            face_pred = parsed_file["face_prediction"]
 
         if audio_path:
             voice_pred = voice_emotion_detector.detect(audio_path)
+        elif parsed_file and parsed_file.get("voice_prediction"):
+            voice_pred = parsed_file["voice_prediction"]
 
         # Fuse predictions using confidence-weighted average fuser
         fused = multimodal_fuser.fuse(
@@ -341,6 +539,26 @@ class ChatService:
         history = self._get_history_for_context(db, user_id, session_id)
         past_memories = memory_service.retrieve_relevant_memory(user_id, english_text, top_k=3)
 
+        # Build explicit multimodal observation prompt for LLM
+        multimodal_note = ""
+        if parsed_file:
+            if parsed_file.get("text"):
+                multimodal_note += (
+                    f"\n\n[USER ATTACHED FILE: {parsed_file['filename']} ({parsed_file['summary']})]\n"
+                    f"File Content / Data:\n{parsed_file['text']}\n"
+                    f"[Instructions: Acknowledge the attached file, analyze its content, and provide a helpful, comprehensive, and empathetic response based on what the file contains.]\n"
+                )
+            else:
+                multimodal_note += f"\n\n[USER ATTACHED FILE: {parsed_file['filename']} ({parsed_file['summary']})]\n"
+
+        if face_pred:
+            multimodal_note += f" [Note to AI: User shared a facial snapshot showing {face_pred.get('emotion', emotion)} expression with {int(face_pred.get('confidence', 0.8)*100)}% confidence. Gently acknowledge their detected facial expression in your opening line.]"
+        if voice_pred:
+            multimodal_note += f" [Note to AI: User shared a voice recording with {voice_pred.get('emotion', emotion)} acoustic tone. Warmly acknowledge their voice tone.]"
+
+        prompt_text_for_llm = english_text + multimodal_note
+        rag_citations = []
+
         # ── Response Generation ──
         if is_crisis and crisis_severity in ("critical", "high"):
             bot_response = _CRISIS_RESPONSE
@@ -348,7 +566,7 @@ class ChatService:
             bot_response = emoji_response
         else:
             bot_response = response_generator.generate(
-                text=english_text,
+                text=prompt_text_for_llm,
                 emotion=emotion,
                 sentiment=sentiment,
                 stress_score=stress_score,
@@ -413,6 +631,8 @@ class ChatService:
             if is_crisis else None
         )
 
+        sources_data = [RAGSource(**c) for c in rag_citations] if rag_citations else None
+
         return ChatResponse(
             message_id=message_id,
             session_id=session_id,
@@ -424,11 +644,13 @@ class ChatService:
                 confidence=confidence,
                 all_scores=all_scores,
             ),
+            intent=diag_intent,
             is_crisis=is_crisis,
             crisis_severity=crisis_severity,
             crisis_type=crisis_result.get("risk_type"),
             crisis_resources=crisis_resources,
             persona=persona,
+            sources=sources_data,
             timestamp=now,
         )
 

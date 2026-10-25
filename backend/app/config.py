@@ -3,7 +3,8 @@ MindCare AI — Application Configuration
 Reads all settings from environment variables / .env file.
 """
 from functools import lru_cache
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,14 +17,20 @@ class Settings(BaseSettings):
     # ── Security ───────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-this-to-a-very-long-random-secret-key-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days session lifetime
 
     # ── Database ───────────────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./mindcare.db"
 
     # ── AI / LLM ───────────────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
-    EMOTION_MODEL_NAME: str = "j-hartmann/emotion-english-distilroberta-base"
+    OPENAI_API_KEY: str = ""
+    CLAUDE_API_KEY: str = ""
+    EMOTION_MODEL_NAME: str = "SamLowe/roberta-base-go_emotions"
+
+    # ── Google OAuth ───────────────────────────────────────────────────────
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
 
     # ── CORS ───────────────────────────────────────────────────────────────
     CORS_ORIGINS: List[str] = [
@@ -54,10 +61,19 @@ class Settings(BaseSettings):
         "overdose",
     ]
 
+    # ── RBAC System Owner Bootstrap ────────────────────────────────────────
+    SYSTEM_OWNER_EMAIL: Optional[str] = None
+    SYSTEM_OWNER_PASSWORD: Optional[str] = None
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            str(Path(__file__).resolve().parent.parent / ".env"),
+            ".env",
+            "backend/.env",
+        ),
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 

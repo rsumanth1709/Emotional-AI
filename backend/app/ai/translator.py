@@ -11,6 +11,19 @@ import re
 from typing import Dict, Tuple
 from app.utils.logger import logger
 
+from functools import lru_cache
+
+def is_english_ascii(text: str) -> bool:
+    """Returns True if the text contains standard ASCII characters (English)."""
+    if not text:
+        return True
+    try:
+        text.encode('ascii')
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
 def detect_and_translate(text: str) -> Tuple[str, str]:
     """
     Detects the language of the input text and translates it to English.
@@ -22,6 +35,10 @@ def detect_and_translate(text: str) -> Tuple[str, str]:
     """
     if not text or len(text.strip()) < 2:
         return text, "en"
+
+    # Fast-Path: If text is standard English ASCII without transliterated keywords, bypass HTTP call
+    text_lower = text.lower().strip()
+    words = set(re.findall(r'\b\w+\b', text_lower))
 
     # Keywords matching Telugu (Tenglish) common words
     tenglish_words = {
@@ -39,15 +56,16 @@ def detect_and_translate(text: str) -> Tuple[str, str]:
         "suno", "samajh", "yaar", "chal", "rha", "rhi", "gayi", "gya"
     }
 
-    text_lower = text.lower().strip()
-    words = set(re.findall(r'\b\w+\b', text_lower))
-
     # Pre-emptively label language code if hybrid vocab is matched
     manual_lang = None
     if words.intersection(tenglish_words):
         manual_lang = "transliterated"
     elif words.intersection(hinglish_words):
         manual_lang = "transliterated"
+
+    # Bypass external HTTP translation if pure ASCII and no transliterated words detected
+    if not manual_lang and is_english_ascii(text):
+        return text, "en"
 
     try:
         # Use Google Translate free API endpoint

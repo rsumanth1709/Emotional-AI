@@ -175,7 +175,7 @@ class GamificationService:
         # 3. First gratitude journal log
         journal_count = db.query(DailyWellnessLog).filter(
             DailyWellnessLog.user_id == user_id,
-            DailyWellnessLog.gratitude_1 != None
+            DailyWellnessLog.journal_entries > 0
         ).count()
         if journal_count >= 1:
             self._award_badge(db, user_id, "Scribe", "journal")
@@ -204,7 +204,8 @@ class GamificationService:
             badge = UserBadge(
                 user_id=user_id,
                 badge_name=badge_name,
-                badge_type=badge_type
+                badge_type=badge_type,
+                description=badge_name,
             )
             db.add(badge)
             db.commit()

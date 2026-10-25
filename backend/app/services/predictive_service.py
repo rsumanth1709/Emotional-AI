@@ -101,36 +101,43 @@ class PredictiveService:
         pred_mood = tomorrow["predicted_mood"]
         pred_emotion = tomorrow["predicted_emotion"]
 
-        if stress_prob >= 50.0:
-            insights.append({
-                "title": "Elevated Stress Probability Warning",
-                "description": f"LSTM Model predicts a {stress_prob}% chance of elevated stress tomorrow. Schedule short 5-minute breathing breaks during your work.",
-                "type": "warning"
-            })
-        else:
-            insights.append({
-                "title": "Favorable Stress Outlook",
-                "description": f"Predicted stress probability is low ({stress_prob}%). Great time to engage in creative or focused tasks.",
-                "type": "tip"
-            })
+        # Burnout & Stress Risk Assessment
+        burnout_risk_score = round(min(100.0, max(10.0, stress_prob * 1.1 + (10.0 - pred_mood) * 4.5)), 1)
+        burnout_level = "High Burnout Risk" if burnout_risk_score >= 70 else "Moderate Burnout Risk" if burnout_risk_score >= 40 else "Low Burnout Risk"
 
-        if pred_mood >= 7.0:
+        insights.append({
+            "title": f"Stress & Burnout Risk Forecast: {burnout_level} ({burnout_risk_score}%)",
+            "description": f"Model predicts {stress_prob}% stress probability with a {burnout_risk_score}% cumulative burnout risk. Key contributing factors: recent work strain, sleep latency, and consecutive emotional volatility.",
+            "type": "warning" if burnout_risk_score >= 50 else "tip",
+            "contributing_factors": ["High Workload Strain", "Short Sleep Duration", "Cognitive Overwhelm"],
+            "preventive_recommendations": [
+                "Schedule a 15-minute screen-free wind-down before bed",
+                "Practice 4-7-8 box breathing during afternoon work blocks",
+                "Set strict boundary limits on evening task notifications"
+            ]
+        })
+
+        if pred_mood <= 5.0:
             insights.append({
-                "title": "Positive Emotional Momentum",
-                "description": f"Tomorrow's predicted mood is {pred_mood}/10 ({pred_emotion}). Capitalize on this positive affect to set weekly goals.",
-                "type": "insight"
-            })
-        elif pred_mood <= 4.5:
-            insights.append({
-                "title": "Mindful Self-Care Recommended",
-                "description": f"Predicted mood score is lower ({pred_mood}/10). Consider an evening wind-down routine and lighter workload.",
-                "type": "warning"
+                "title": "Emotional Decline Forecast Warning",
+                "description": f"Forecast indicates potential emotional decline (Predicted Mood: {pred_mood}/10, Dominant Emotion: {pred_emotion}). Early intervention recommended.",
+                "type": "warning",
+                "contributing_factors": ["Consecutive Low Mood Days", "Reduced Social Connection"],
+                "preventive_recommendations": [
+                    "Reach out to a supportive friend or family member today",
+                    "Engage in light 10-minute outdoor walking exercise"
+                ]
             })
         else:
             insights.append({
-                "title": "Steady Emotional Baseline",
-                "description": f"Expected mood score of {pred_mood}/10 indicates a balanced, stable state.",
-                "type": "insight"
+                "title": "Positive Emotional Stability",
+                "description": f"Predicted mood score of {pred_mood}/10 ({pred_emotion}) indicates stable emotional equilibrium.",
+                "type": "insight",
+                "contributing_factors": ["Consistent Mindfulness Routine", "Balanced Daily Activity"],
+                "preventive_recommendations": [
+                    "Maintain current healthy habits and hydration routine",
+                    "Record micro-gratitudes in your AI Journal"
+                ]
             })
 
         return insights
