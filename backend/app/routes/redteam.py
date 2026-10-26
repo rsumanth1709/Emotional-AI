@@ -11,7 +11,18 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.redteam import RedTeamRun, RedTeamResult, RedTeamEvaluation, RedTeamRegression, RedTeamTestCase
-from redteam.runner import redteam_runner
+try:
+    from redteam.runner import redteam_runner
+except ImportError:
+    try:
+        import sys
+        from pathlib import Path
+        _root = Path(__file__).resolve().parent.parent.parent.parent
+        if str(_root) not in sys.path:
+            sys.path.insert(0, str(_root))
+        from redteam.runner import redteam_runner
+    except ImportError:
+        redteam_runner = None
 from app.utils.security import get_current_active_user
 
 router = APIRouter(tags=["Red-Team Framework"])
