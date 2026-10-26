@@ -15,8 +15,10 @@ import {
   CheckCircle2,
   Mail,
   User,
-  ShieldCheck,
   Loader2,
+  Copy,
+  Check,
+  Zap,
 } from "lucide-react";
 
 declare global {
@@ -24,6 +26,9 @@ declare global {
     google?: any;
   }
 }
+
+const DEFAULT_GOOGLE_CLIENT_ID =
+  "556522126517-kvjd9j7odkmjji0u14jphesih9bp9ckh.apps.googleusercontent.com";
 
 interface GoogleSignInButtonProps {
   label?: string;
@@ -38,13 +43,24 @@ export default function GoogleSignInButton({
   const { loginWithGoogle } = useAuth();
 
   const [loading, setLoading] = useState(false);
-  const [clientId, setClientId] = useState<string>("");
+  const [clientId, setClientId] = useState<string>(
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID
+  );
   const [showModal, setShowModal] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [customEmail, setCustomEmail] = useState("");
   const [customName, setCustomName] = useState("");
+  const [currentOrigin, setCurrentOrigin] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const gisContainerRef = useRef<HTMLDivElement>(null);
+
+  // Detect browser origin on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentOrigin(window.location.origin);
+    }
+  }, []);
 
   // 1. Fetch Google Client ID if available from backend or environment
   useEffect(() => {
@@ -62,13 +78,14 @@ export default function GoogleSignInButton({
         }
       })
       .catch(() => {
-        // Fallback silently if offline or unconfigured
+        // Fallback silently to DEFAULT_GOOGLE_CLIENT_ID
       });
   }, []);
 
   // 2. Load Google Identity Services SDK script when Client ID is available
   useEffect(() => {
-    if (!clientId || typeof window === "undefined") return;
+    const activeId = clientId || DEFAULT_GOOGLE_CLIENT_ID;
+    if (!activeId || typeof window === "undefined") return;
 
     const existingScript = document.getElementById("google-gsi-client");
     if (!existingScript) {
@@ -116,11 +133,12 @@ export default function GoogleSignInButton({
   };
 
   const initializeGoogleGsi = () => {
-    if (!window.google?.accounts?.id || !clientId) return;
+    const activeId = clientId || DEFAULT_GOOGLE_CLIENT_ID;
+    if (!window.google?.accounts?.id || !activeId) return;
 
     try {
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: activeId,
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -145,14 +163,16 @@ export default function GoogleSignInButton({
       return;
     }
 
-    if (clientId && window.google?.accounts?.oauth2) {
+    const activeId = clientId || DEFAULT_GOOGLE_CLIENT_ID;
+
+    if (activeId && window.google?.accounts?.oauth2) {
       try {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
+          client_id: activeId,
           scope: "openid email profile",
           callback: async (tokenResponse: any) => {
             if (tokenResponse?.error) {
-              console.warn("Google OAuth popup error or cancelled:", tokenResponse.error);
+              console.warn("Google OAuth popup response/error:", tokenResponse.error);
               if (tokenResponse.error !== "popup_closed_by_user") {
                 setShowModal(true);
               }
@@ -198,7 +218,7 @@ export default function GoogleSignInButton({
       }
     }
 
-    if (clientId && window.google?.accounts?.id) {
+    if (activeId && window.google?.accounts?.id) {
       window.google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setShowModal(true);
@@ -230,6 +250,15 @@ export default function GoogleSignInButton({
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopyOrigin = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(currentOrigin);
+      setCopied(true);
+      toast.success("Domain copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -284,7 +313,7 @@ export default function GoogleSignInButton({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 text-left text-white"
+              className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 text-left text-white max-h-[90vh] overflow-y-auto"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
@@ -325,41 +354,43 @@ export default function GoogleSignInButton({
                 </button>
               </div>
 
-              {/* Client ID Status Badge */}
-              {clientId && (
-                <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-[11px] text-emerald-300">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                    <span className="truncate font-semibold">Google Cloud OAuth Active</span>
-                  </div>
-                  <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded font-mono text-emerald-300 flex-shrink-0">
-                    ...{clientId.slice(-18)}
-                  </span>
+              {/* Status Banner */}
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-emerald-200">Google OAuth Client Ready</p>
+                  <p className="text-[11px] text-emerald-400/90 mt-0.5">
+                    You can sign in with 1-click below, or enter your personal Google email address.
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {/* Official Google OAuth Popup Launcher */}
-              {clientId && (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => {
-                      setShowModal(false);
-                      handleButtonClick();
-                    }}
-                    className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    <span>Open Official Google Login Window</span>
-                  </button>
-                </div>
-              )}
+              {/* Quick 1-Click Instant Sign-In Option */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-slate-300 block">
+                  Option 1: Quick 1-Click Demo Login
+                </span>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() =>
+                    handleSimulatedGoogleLogin("sumanth@mindcare.ai", "Sumanth")
+                  }
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4" />
+                  )}
+                  <span>Sign In as Sumanth (Instant Access)</span>
+                </button>
+              </div>
 
               {/* Or enter personal Google Email */}
-              <div className="space-y-3 pt-2 border-t border-slate-800/80">
+              <div className="space-y-3 pt-3 border-t border-slate-800/80">
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Or enter any Google account:
+                  Option 2: Enter Any Google Email
                 </span>
                 <div className="space-y-2">
                   <div className="relative">
@@ -388,7 +419,7 @@ export default function GoogleSignInButton({
                     onClick={() =>
                       handleSimulatedGoogleLogin(customEmail, customName)
                     }
-                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     {loading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -400,6 +431,25 @@ export default function GoogleSignInButton({
                 </div>
               </div>
 
+              {/* Official Google OAuth Popup Launcher */}
+              <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                <span className="text-xs font-semibold text-slate-300 block">
+                  Option 3: Launch Google OAuth Popup
+                </span>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setShowModal(false);
+                    handleButtonClick();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Open Native Google Popup</span>
+                </button>
+              </div>
+
               {/* Expandable Setup Instructions for Official Google Cloud OAuth */}
               <div className="pt-2 border-t border-slate-800/80">
                 <button
@@ -409,7 +459,7 @@ export default function GoogleSignInButton({
                 >
                   <span className="flex items-center gap-1.5 font-medium">
                     <Sparkles className="w-3 h-3 text-amber-400" />
-                    Setup Google Cloud Client ID (Production)
+                    Domain Authorization Guide (For Production)
                   </span>
                   {showSetupGuide ? (
                     <ChevronUp className="w-3.5 h-3.5" />
@@ -423,9 +473,35 @@ export default function GoogleSignInButton({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-2 p-3 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 space-y-2"
+                    className="mt-2 p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 space-y-3"
                   >
-                    <ol className="list-decimal list-inside space-y-1 text-slate-400">
+                    <p className="text-slate-400 leading-relaxed">
+                      Google OAuth requires any production domain (like Vercel) to be whitelisted under{" "}
+                      <span className="text-white font-semibold">Authorized JavaScript origins</span>:
+                    </p>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+                      <div className="truncate font-mono text-[10px] text-blue-300">
+                        {currentOrigin || "https://your-domain.vercel.app"}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyOrigin}
+                        className="px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-[10px] font-semibold flex items-center gap-1 flex-shrink-0"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Origin</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-1.5 text-slate-400">
                       <li>
                         Go to{" "}
                         <a
@@ -434,22 +510,12 @@ export default function GoogleSignInButton({
                           rel="noreferrer"
                           className="text-blue-400 hover:underline inline-flex items-center gap-0.5"
                         >
-                          Google Cloud Console <ExternalLink className="w-2.5 h-2.5" />
+                          Google Cloud Console Credentials <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       </li>
-                      <li>Create an OAuth 2.0 Web Client ID.</li>
-                      <li>
-                        Add Authorized Origin:{" "}
-                        <code className="text-white bg-slate-800 px-1 py-0.5 rounded text-[10px]">
-                          http://localhost:3000
-                        </code>
-                      </li>
-                      <li>
-                        Add to <code className="text-amber-300">backend/.env</code>:
-                        <div className="mt-1 p-1.5 rounded bg-slate-900 border border-slate-800 font-mono text-[10px] text-slate-200">
-                          GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-                        </div>
-                      </li>
+                      <li>Click your OAuth 2.0 Web Client ID.</li>
+                      <li>Paste your copied domain into <span className="text-white">Authorized JavaScript origins</span>.</li>
+                      <li>Click <span className="text-emerald-400 font-semibold">Save</span>. Google popup will now work directly!</li>
                     </ol>
                   </motion.div>
                 )}
