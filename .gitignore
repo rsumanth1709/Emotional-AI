@@ -18,3 +18,5 @@ dist/
 build/
 logs/
 *.log
+
+!.env.example

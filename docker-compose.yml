@@ -6,37 +6,76 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mindcare_backend
-    ports:
-      - "8000:8000"
+    restart: always
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=sqlite:///./mindcare.db
       - SECRET_KEY=${SECRET_KEY:-your-production-secret-key-change-this-mindcare-ai}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - FRONTEND_URL=http://localhost:3000
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - DEBUG=False
+    ports:
+      - "8000:8000"
     volumes:
       - backend_data:/app/data
       - backend_chroma:/app/mindcare.chroma
       - backend_logs:/app/logs
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mindcare_network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=http://localhost:8000
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: mindcare_frontend
+    restart: always
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - NODE_ENV=production
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - mindcare_network
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: mindcare_proxy
     restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - mindcare_network
+
+networks:
+  mindcare_network:
+    driver: bridge
 
 volumes:
   backend_data:
   backend_chroma:
   backend_logs:
+  caddy_data:
+  caddy_config:

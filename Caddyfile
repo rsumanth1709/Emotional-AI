@@ -1,0 +1,42 @@
+{
+    email {$ACME_EMAIL:admin@example.com}
+    admin off
+}
+
+# Production Domain / Host Reverse Proxy
+{$DOMAIN:localhost} {
+    # Backend API and Authentication endpoints
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    handle /auth/* {
+        reverse_proxy backend:8000
+    }
+    handle /docs* {
+        reverse_proxy backend:8000
+    }
+    handle /redoc* {
+        reverse_proxy backend:8000
+    }
+    handle /openapi.json {
+        reverse_proxy backend:8000
+    }
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    # Next.js Frontend pages, static assets, and client routing
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    # Security & Performance Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    encode gzip zstd
+}

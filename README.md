@@ -7,6 +7,34 @@
 
 ---
 
+## 🚀 Quick Production Deployment (VPS & Docker Compose)
+
+MindCare AI includes complete production Docker Compose orchestration with automated Caddy reverse proxy and Let's Encrypt SSL.
+
+### 1-Command Automated Server Setup (Ubuntu 22.04 / 24.04 LTS)
+SSH into your clean Ubuntu server and run:
+\\ash
+curl -fsSL https://raw.githubusercontent.com/rsumanth1709/MindCare-AI/main/setup-server.sh | sudo bash
+\*This script automatically configures 4GB swap space, firewall, Docker Engine, clones the repository, generates secure keys in \.env\, and launches the entire stack.*
+
+### Manual Docker Compose Deployment
+\\ash
+# 1. Clone repository
+git clone https://github.com/rsumanth1709/MindCare-AI.git /opt/mindcare
+cd /opt/mindcare
+
+# 2. Configure environment
+cp .env.example .env
+nano .env  # Insert your GEMINI_API_KEY, SECRET_KEY, and DOMAIN
+
+# 3. Launch all services (Backend, Frontend, and Caddy SSL)
+docker compose up -d --build
+
+# 4. Zero-downtime updates
+./deploy.sh
+\
+---
+
 ## 🌟 Key Platform Capabilities & Modules
 
 ### 1. 🎬 Video-Based Emotion Analysis & Multi-Layer Timeline
@@ -399,8 +427,7 @@ cd backend
 pip install -r requirements.txt
 
 # Start FastAPI server gracefully on port 8000
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
+python run.py
 ```
 - **Interactive Swagger API Documentation**: `http://localhost:8000/docs`
 - **Health Check Endpoint Verification**: `http://localhost:8000/health` (returns `{"status": "healthy"}`)
