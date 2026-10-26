@@ -22,12 +22,9 @@ COPY . .
 # Create logs directory
 RUN mkdir -p logs
 
-# Expose API port
-EXPOSE 8000
+# Expose API port (defaults to 8000, dynamically accepts Render's $PORT)
+ENV PORT=8000
+EXPOSE ${PORT}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run the application with dynamic $PORT binding
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

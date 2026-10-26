@@ -55,12 +55,14 @@ if str(backend_dir) not in sys.path:
 import uvicorn
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    debug = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
     try:
         uvicorn.run(
             "app.main:app",
             host="0.0.0.0",
-            port=8000,
-            reload=True,
+            port=port,
+            reload=debug,
             log_level="info",
         )
     except KeyboardInterrupt:
